@@ -1,6 +1,7 @@
 import { Outlet, Link } from "react-router-dom";
 import styles from "./Layout.module.css";
 import Contoso from "../../assets/Contoso.svg";
+import soslogo from "../../assets/soskinderdorf-at.svg";
 import { CopyRegular } from "@fluentui/react-icons";
 import { Dialog, Stack, TextField } from "@fluentui/react";
 import { useContext, useEffect, useState } from "react";
@@ -49,12 +50,12 @@ const Layout = () => {
         const handleResize = () => {
           if (window.innerWidth < 480) {
             setShareLabel(undefined)
-            setHideHistoryLabel("Hide history")
-            setShowHistoryLabel("Show history")
+            setHideHistoryLabel("Verstecke Verlauf")
+            setShowHistoryLabel("Zeige Verlauf")
           } else {
             setShareLabel("Share")
-            setHideHistoryLabel("Hide chat history")
-            setShowHistoryLabel("Show chat history")
+            setHideHistoryLabel("Verstecke Verlauf")
+            setShowHistoryLabel("Zeige Verlauf")
           }
         };
     
@@ -70,7 +71,7 @@ const Layout = () => {
                 <Stack horizontal verticalAlign="center" horizontalAlign="space-between">
                     <Stack horizontal verticalAlign="center">
                         <img
-                            src={ui?.logo ? ui.logo : Contoso}
+                            src={ui?.logo ? ui.logo : soslogo}
                             className={styles.headerIcon}
                             aria-hidden="true"
                         />
@@ -82,7 +83,7 @@ const Layout = () => {
                         {(appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured) &&
                             <HistoryButton onClick={handleHistoryClick} text={appStateContext?.state?.isChatHistoryOpen ? hideHistoryLabel : showHistoryLabel} />
                         }
-                        {ui?.show_share_button &&<ShareButton onClick={handleShareClick} text={shareLabel} />}
+                        {/* ui?.show_share_button &&<ShareButton onClick={handleShareClick} text={shareLabel} /> */}
                     </Stack>
                 </Stack>
             </header>
