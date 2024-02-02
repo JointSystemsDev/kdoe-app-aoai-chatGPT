@@ -73,9 +73,9 @@ const Chat = () => {
 
     useEffect(() => {
         if (appStateContext?.state.isCosmosDBAvailable?.status === CosmosDBStatus.NotWorking && appStateContext.state.chatHistoryLoadingState === ChatHistoryLoadingState.Fail && hideErrorDialog) {
-            let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. Please contact the site administrator.`
+            let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. Bitte kontaktieren Sie den Administrator dieser App.`
             setErrorMsg({
-                title: "Chat history is not enabled",
+                title: "Chat Verlauf ist nicht aktiviert",
                 subtitle: subtitle
             })
             toggleErrorDialog();
@@ -590,7 +590,7 @@ const Chat = () => {
                                     className={styles.chatIcon}
                                     aria-hidden="true"
                                 />
-                                <h1 className={styles.chatEmptyStateTitle}>Leg Los!</h1>
+                                <h1 className={styles.chatEmptyStateTitle}>Leg los!</h1>
                                 <h2 className={styles.chatEmptyStateSubtitle}>Dieser ChatBot ist dazu konfiguriert, Deine Fragen zu beantworten</h2>
                             </Stack>
                         ) : (

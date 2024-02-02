@@ -323,7 +323,7 @@ export const ChatHistoryListItemGroups: React.FC<ChatHistoryListItemGroupsProps>
           }}/>
         </Stack>
       ))}
-      {showSpinner && <div className={styles.spinnerContainer}><Spinner size={SpinnerSize.small} aria-label="loading more chat history" className={styles.spinner}/></div>}
+      {showSpinner && <div className={styles.spinnerContainer}><Spinner size={SpinnerSize.small} aria-label="Lad weitere Chatverl&auml;ufe" className={styles.spinner}/></div>}
     </div>
   );
 };

@@ -235,7 +235,7 @@ export const Answer = ({
                     </Stack.Item>
                 )}
                 <Stack.Item className={styles.answerDisclaimerContainer}>
-                    <span className={styles.answerDisclaimer}>AI-generierte Inhalte m&ouml;ssen nicht unbedingt richtig sein, bitte pr&uuml;en sie Sekund&auml;rquellen!</span>
+                    <span className={styles.answerDisclaimer}>AI-generierter Inhalt kann falsch sein.</span>
                 </Stack.Item>
                 </Stack>
                 {chevronIsExpanded && 
