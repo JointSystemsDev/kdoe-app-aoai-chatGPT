@@ -3,6 +3,7 @@ import { Stack, TextField } from "@fluentui/react";
 import { SendRegular } from "@fluentui/react-icons";
 import Send from "../../assets/Send.svg";
 import styles from "./QuestionInput.module.css";
+import { appInsights } from '../../ApplicationInsightsService';
 
 interface Props {
     onSend: (question: string, id?: string) => void;
@@ -16,6 +17,9 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
     const [question, setQuestion] = useState<string>("");
 
     const sendQuestion = () => {
+
+        appInsights.trackEvent({ name: `Event: SendQuestion` });
+
         if (disabled || !question.trim()) {
             return;
         }
