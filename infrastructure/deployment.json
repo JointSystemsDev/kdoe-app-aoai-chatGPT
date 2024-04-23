@@ -183,7 +183,7 @@
         },
         "AzureOpenAISystemMessage": {
             "type": "string",
-            "defaultValue": "You are an AI assistant that helps people find information.",
+            "defaultValue": "You are Hermine, an AI assistant that helps people find information.",
             "metadata": {
                 "description": "Azure OpenAI System Message"
             }

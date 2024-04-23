@@ -33,8 +33,14 @@
 
 .headerIcon {
     height: 45px;
-    width: auto;
+    width: 140px;
     margin-left: 36px;
+}
+
+.headerAdditionalIcon {
+    display: block;
+    height: 45px;
+    width: auto;
 }
 
 .shareButtonContainer {
