@@ -2,6 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import styles from "./Layout.module.css";
 import Contoso from "../../assets/Contoso.svg";
 import soslogo from "../../assets/soskinderdorf-at.svg";
+import herminelogo from "../../assets/hermine.png";
 import { CopyRegular, ShareRegular } from "@fluentui/react-icons";
 import { Dialog, Stack, TextField, ICommandBarStyles, IButtonStyles } from "@fluentui/react";
 import { useContext, useEffect, useState } from "react";
@@ -53,7 +54,15 @@ const Layout = () => {
                             aria-hidden="true"
                         />
                         <Link to="/" className={styles.headerTitleContainer}>
-                            <h1 className={styles.headerTitle}>ChatBot</h1>
+                            <h1 className={styles.headerTitle}>Hermine</h1>
+                        </Link>
+                        <img
+                            src={herminelogo}
+                            className={styles.headerAdditionalIcon}
+                            aria-hidden="true"
+                        />
+                        <Link to="https://sos-kinderdorf.coyocloud.com/pages/ki-bewegung-sos-kinderdorf/apps/content/videoserie-chatbots" target="_blank" className={styles.headerTitleContainer}>
+                            <h1 className={styles.headerTitle}>Hilfe</h1>
                         </Link>
                     </Stack>
                     <Stack horizontal tokens={{ childrenGap: 4 }}>

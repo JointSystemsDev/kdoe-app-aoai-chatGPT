@@ -9,7 +9,7 @@ import uuid from 'react-uuid';
 import { isEmpty } from "lodash-es";
 
 import styles from "./Chat.module.css";
-import soslogo from "../../assets/soskinderdorf-at.svg";
+import herminelogo from "../../assets/hermine.png";
 
 import {
     ChatMessage,
@@ -586,12 +586,12 @@ const Chat = () => {
                         {!messages || messages.length < 1 ? (
                             <Stack className={styles.chatEmptyState}>
                                 <img
-                                    src={soslogo}
+                                    src={herminelogo}
                                     className={styles.chatIcon}
                                     aria-hidden="true"
                                 />
                                 <h1 className={styles.chatEmptyStateTitle}>Leg los!</h1>
-                                <h2 className={styles.chatEmptyStateSubtitle}>Dieser ChatBot ist dazu konfiguriert, Deine Fragen zu beantworten</h2>
+                                <h2 className={styles.chatEmptyStateSubtitle}>Hermine, unser Chatbot, hilft dir bei den verschiedensten Anfragen &amp; Problemen.</h2>
                             </Stack>
                         ) : (
                             <div className={styles.chatMessageStream} style={{ marginBottom: isLoading ? "40px" : "0px" }} role="log">

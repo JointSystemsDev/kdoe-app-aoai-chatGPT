@@ -224,7 +224,7 @@ Note: settings starting with `AZURE_SEARCH` are only needed when using Azure Ope
 |AZURE_OPENAI_TOP_P|1.0|An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. We recommend setting this to 1.0 when using your data.|
 |AZURE_OPENAI_MAX_TOKENS|1000|The maximum number of tokens allowed for the generated answer.|
 |AZURE_OPENAI_STOP_SEQUENCE||Up to 4 sequences where the API will stop generating further tokens. Represent these as a string joined with "|", e.g. `"stop1|stop2|stop3"`|
-|AZURE_OPENAI_SYSTEM_MESSAGE|You are an AI assistant that helps people find information.|A brief description of the role and tone the model should use|
+|AZURE_OPENAI_SYSTEM_MESSAGE|You are Hermine, an AI assistant that helps people find information.|A brief description of the role and tone the model should use|
 |AZURE_OPENAI_PREVIEW_API_VERSION|2023-06-01-preview|API version when using Azure OpenAI on your data|
 |AZURE_OPENAI_STREAM|True|Whether or not to use streaming for the response|
 |AZURE_OPENAI_EMBEDDING_NAME||The name of your embedding model deployment if using vector search.
