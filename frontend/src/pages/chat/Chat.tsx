@@ -82,7 +82,7 @@ const Chat = () => {
             && hideErrorDialog) {
             let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. Bitte kontaktieren Sie den Administrator dieser App.`
             setErrorMsg({
-                title: "Chat Verlauf ist nicht aktiviert",
+                title: "Chat­ver­lauf ist nicht aktiviert.",
                 subtitle: subtitle
             })
             toggleErrorDialog();
