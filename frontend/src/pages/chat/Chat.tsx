@@ -10,7 +10,7 @@ import { isEmpty } from "lodash";
 import DOMPurify from 'dompurify';
 
 import styles from "./Chat.module.css";
-import herminelogo from "../../assets/hermine.png";
+import soslogo from "../../assets/hg-logo.jpg";
 import { XSSAllowTags } from "../../constants/xssAllowTags";
 
 import {
@@ -82,7 +82,7 @@ const Chat = () => {
             && hideErrorDialog) {
             let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. Bitte kontaktieren Sie den Administrator dieser App.`
             setErrorMsg({
-                title: "Chat­ver­lauf ist nicht aktiviert.",
+                title: "Chatï¿½verï¿½lauf ist nicht aktiviert.",
                 subtitle: subtitle
             })
             toggleErrorDialog();
@@ -649,7 +649,7 @@ const Chat = () => {
                         {!messages || messages.length < 1 ? (
                             <Stack className={styles.chatEmptyState}>
                                 <img
-                                    src={ui?.chat_logo ? ui.chat_logo : herminelogo}
+                                    src={ui?.chat_logo ? ui.chat_logo : soslogo}
                                     className={styles.chatIcon}
                                     aria-hidden="true"
                                 />

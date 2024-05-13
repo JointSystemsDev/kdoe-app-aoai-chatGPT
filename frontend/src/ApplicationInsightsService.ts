@@ -5,7 +5,7 @@ export const reactPlugin = new ReactPlugin();
 
 export const appInsights = new ApplicationInsights({
   config: {
-    instrumentationKey: 'ea103ae4-0caf-4f30-990a-0e046de2b8e6',
+    instrumentationKey: '52fee5be-4389-4ad0-87da-632a8415df13',
   },
 });
 appInsights.loadAppInsights();
