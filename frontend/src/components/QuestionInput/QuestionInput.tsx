@@ -13,6 +13,8 @@ interface Props {
     conversationId?: string;
 }
 
+const MAX_CHAR_LIMIT = 5000;
+
 export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conversationId }: Props) => {
     const [question, setQuestion] = useState<string>("");
 
@@ -43,7 +45,13 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
     };
 
     const onQuestionChange = (_ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
-        setQuestion(newValue || "");
+        if (newValue && newValue.length <= MAX_CHAR_LIMIT) {
+            setQuestion(newValue);
+        }
+        if (!newValue)
+        {
+            setQuestion("");
+        }
     };
 
     const sendQuestionDisabled = disabled || !question.trim();
@@ -74,6 +82,9 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
                 }
             </div>
             <div className={styles.questionInputBottomBorder} />
+            <div className={styles.characterCount}>
+                {`${question.length}/${MAX_CHAR_LIMIT}`}
+            </div>
         </Stack>
     );
 };
