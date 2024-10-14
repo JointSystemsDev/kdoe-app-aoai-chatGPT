@@ -131,6 +131,13 @@ export type UI = {
   chat_logo?: string
   show_share_button?: boolean
   show_chat_history_button?: boolean
+  enable_image_chat?: boolean
+  language?: string
+  additional_header_logo?: string
+  help_link_title?: string
+  help_link_url?: string
+  limit_input_to_characters: number,
+  appinsights_instrumentationkey?: string,
 }
 
 export type FrontendSettings = {

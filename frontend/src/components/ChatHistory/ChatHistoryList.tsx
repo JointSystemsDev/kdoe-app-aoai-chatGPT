@@ -6,6 +6,8 @@ import { AppStateContext } from '../../state/AppProvider'
 
 import { ChatHistoryListItemGroups } from './ChatHistoryListItem'
 
+import { t } from '../../utils/localization';
+
 interface ChatHistoryListProps {}
 
 export interface GroupedChatHistory {
@@ -14,7 +16,7 @@ export interface GroupedChatHistory {
 }
 
 const groupByMonth = (entries: Conversation[]) => {
-  const groups: GroupedChatHistory[] = [{ month: 'Recent', entries: [] }]
+  const groups: GroupedChatHistory[] = [{ month: t('Recent'), entries: [] }]
   const currentDate = new Date()
 
   entries.forEach(entry => {
@@ -73,7 +75,7 @@ const ChatHistoryList: React.FC<ChatHistoryListProps> = () => {
       <Stack horizontal horizontalAlign="center" verticalAlign="center" style={{ width: '100%', marginTop: 10 }}>
         <StackItem>
           <Text style={{ alignSelf: 'center', fontWeight: '400', fontSize: 14 }}>
-            <span>No chat history.</span>
+            <span>{t('No chat history.')}.</span>
           </Text>
         </StackItem>
       </Stack>

@@ -10,13 +10,15 @@ import { AppStateContext } from '../../state/AppProvider'
 
 import styles from './Layout.module.css'
 
+import { t } from '../../utils/localization';
+
 const Layout = () => {
   const [isSharePanelOpen, setIsSharePanelOpen] = useState<boolean>(false)
   const [copyClicked, setCopyClicked] = useState<boolean>(false)
   const [copyText, setCopyText] = useState<string>('Copy URL')
   const [shareLabel, setShareLabel] = useState<string | undefined>('Share')
-  const [hideHistoryLabel, setHideHistoryLabel] = useState<string>('Hide chat history')
-  const [showHistoryLabel, setShowHistoryLabel] = useState<string>('Show chat history')
+  // const [hideHistoryLabel, setHideHistoryLabel] = useState<string>('Hide chat history')
+  // const [showHistoryLabel, setShowHistoryLabel] = useState<string>('Show chat history')
   const [logo, setLogo] = useState('')
   const appStateContext = useContext(AppStateContext)
   const ui = appStateContext?.state.frontendSettings?.ui
@@ -54,24 +56,22 @@ const Layout = () => {
 
   useEffect(() => { }, [appStateContext?.state.isCosmosDBAvailable.status])
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 480) {
-        setShareLabel(undefined)
-        setHideHistoryLabel('Hide history')
-        setShowHistoryLabel('Show history')
-      } else {
-        setShareLabel('Share')
-        setHideHistoryLabel('Hide chat history')
-        setShowHistoryLabel('Show chat history')
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    handleResize()
-
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  // useEffect(() => {
+  //   const handleResize = () => {
+  //     if (window.innerWidth < 480) {
+  //       setShareLabel(undefined)
+  //       setHideHistoryLabel(t('Hide history'))
+  //       setShowHistoryLabel(t('Show history'))
+  //     } else {
+  //       setShareLabel(t('Share'))
+  //       setHideHistoryLabel(t('Hide chat history'))
+  //       setShowHistoryLabel(t('Show chat history'))
+  //     }
+  //   }
+    // window.addEventListener('resize', handleResize)
+    // handleResize()
+  //   return () => window.removeEventListener('resize', handleResize)
+  // }, [])
 
   return (
     <div className={styles.layout}>
@@ -82,12 +82,22 @@ const Layout = () => {
             <Link to="/" className={styles.headerTitleContainer}>
               <h1 className={styles.headerTitle}>{ui?.title}</h1>
             </Link>
+            {
+              ui?.additional_header_logo && (
+                <img src={ui?.additional_header_logo} className={styles.headerIcon} aria-hidden="true" alt="" />
+            )}
+             {
+              ui?.help_link_title && ui.help_link_url && (
+                <Link to={ui.help_link_url} target="_blank" className={styles.headerTitleContainer}>
+                  <h1 className={styles.headerTitle}>{ui?.help_link_title}</h1>
+                </Link>
+            )}
           </Stack>
           <Stack horizontal tokens={{ childrenGap: 4 }} className={styles.shareButtonContainer}>
             {appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && ui?.show_chat_history_button !== false && (
               <HistoryButton
                 onClick={handleHistoryClick}
-                text={appStateContext?.state?.isChatHistoryOpen ? hideHistoryLabel : showHistoryLabel}
+                text={appStateContext?.state?.isChatHistoryOpen ? t('Hide chat history') : t('Show chat history')}
               />
             )}
             {ui?.show_share_button && <ShareButton onClick={handleShareClick} text={shareLabel} />}

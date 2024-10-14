@@ -26,6 +26,8 @@ import { GroupedChatHistory } from './ChatHistoryList'
 
 import styles from './ChatHistoryPanel.module.css'
 
+import { t } from '../../utils/localization';
+
 interface ChatHistoryListItemCellProps {
   item?: Conversation
   onSelect: (item: Conversation | null) => void
@@ -64,9 +66,9 @@ export const ChatHistoryListItemCell: React.FC<ChatHistoryListItemCellProps> = (
   const isSelected = item?.id === appStateContext?.state.currentChat?.id
   const dialogContentProps = {
     type: DialogType.close,
-    title: 'Are you sure you want to delete this item?',
-    closeButtonAriaLabel: 'Close',
-    subText: 'The history of this chat session will permanently removed.'
+    title: t('Are you sure you want to delete this item?'),
+    closeButtonAriaLabel: t('Close'),
+    subText: t('The history of this chat session will permanently removed.')
   }
 
   const modalProps = {
@@ -118,7 +120,11 @@ export const ChatHistoryListItemCell: React.FC<ChatHistoryListItemCellProps> = (
     appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: item })
   }
 
-  const truncatedTitle = item?.title?.length > 28 ? `${item.title.substring(0, 28)} ...` : item.title
+  const truncatedTitle = item.title && typeof item.title === 'string'
+  ? item.title.length > 28 
+    ? `${item.title.substring(0, 28)} ...` 
+    : item.title
+  : 'Untitled'
 
   const handleSaveEdit = async (e: any) => {
     e.preventDefault()
@@ -253,14 +259,14 @@ export const ChatHistoryListItemCell: React.FC<ChatHistoryListItemCellProps> = (
                 <IconButton
                   className={styles.itemButton}
                   iconProps={{ iconName: 'Delete' }}
-                  title="Delete"
+                  title={t("Delete")}
                   onClick={toggleDeleteDialog}
                   onKeyDown={e => (e.key === ' ' ? toggleDeleteDialog() : null)}
                 />
                 <IconButton
                   className={styles.itemButton}
                   iconProps={{ iconName: 'Edit' }}
-                  title="Edit"
+                  title={t("Edit")}
                   onClick={onEdit}
                   onKeyDown={e => (e.key === ' ' ? onEdit() : null)}
                 />
@@ -283,8 +289,8 @@ export const ChatHistoryListItemCell: React.FC<ChatHistoryListItemCellProps> = (
         dialogContentProps={dialogContentProps}
         modalProps={modalProps}>
         <DialogFooter>
-          <PrimaryButton onClick={onDelete} text="Delete" />
-          <DefaultButton onClick={toggleDeleteDialog} text="Cancel" />
+          <PrimaryButton onClick={onDelete} text={t("Delete")} />
+          <DefaultButton onClick={toggleDeleteDialog} text={t("Cancel")} />
         </DialogFooter>
       </Dialog>
     </Stack>
@@ -387,7 +393,7 @@ export const ChatHistoryListItemGroups: React.FC<ChatHistoryListItemGroupsProps>
       )}
       {showSpinner && (
         <div className={styles.spinnerContainer}>
-          <Spinner size={SpinnerSize.small} aria-label="loading more chat history" className={styles.spinner} />
+          <Spinner size={SpinnerSize.small} aria-label={t("loading more chat history")} className={styles.spinner} />
         </div>
       )}
     </div>

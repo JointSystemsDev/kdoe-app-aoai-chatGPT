@@ -15,6 +15,8 @@ import styles from './Chat.module.css'
 import Contoso from '../../assets/Contoso.svg'
 import { XSSAllowTags } from '../../constants/sanatizeAllowables'
 
+import { t } from '../../utils/localization';
+
 import {
   ChatMessage,
   ConversationRequest,
@@ -90,9 +92,9 @@ const Chat = () => {
       appStateContext?.state.chatHistoryLoadingState === ChatHistoryLoadingState.Fail &&
       hideErrorDialog
     ) {
-      let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. Please contact the site administrator.`
+      let subtitle = `${appStateContext.state.isCosmosDBAvailable.status}. ${t('Please contact the site administrator')}.`
       setErrorMsg({
-        title: 'Chat history is not enabled',
+        title: t('Chat history is not enabled'),
         subtitle: subtitle
       })
       toggleErrorDialog()
@@ -836,7 +838,7 @@ const Chat = () => {
                     <div className={styles.chatMessageGpt}>
                       <Answer
                         answer={{
-                          answer: "Generating answer...",
+                          answer: t("Generating answer..."),
                           citations: [],
                           generated_chart: null
                         }}
@@ -862,7 +864,7 @@ const Chat = () => {
                   onKeyDown={e => (e.key === 'Enter' || e.key === ' ' ? stopGenerating() : null)}>
                   <SquareRegular className={styles.stopGeneratingIcon} aria-hidden="true" />
                   <span className={styles.stopGeneratingText} aria-hidden="true">
-                    Stop generating
+                    {t("Stop generating")}
                   </span>
                 </Stack>
               )}
@@ -933,7 +935,7 @@ const Chat = () => {
               </Stack>
               <QuestionInput
                 clearOnSend
-                placeholder="Type a new question..."
+                placeholder={t("Type a new question...")}
                 disabled={isLoading}
                 onSend={(question, id) => {
                   appStateContext?.state.isCosmosDBAvailable?.cosmosDB
@@ -956,7 +958,7 @@ const Chat = () => {
                 horizontalAlign="space-between"
                 verticalAlign="center">
                 <span aria-label="Citations" className={styles.citationPanelHeader}>
-                  Citations
+                  {t('Citations')}
                 </span>
                 <IconButton
                   iconProps={{ iconName: 'Cancel' }}
@@ -995,7 +997,7 @@ const Chat = () => {
                 horizontalAlign="space-between"
                 verticalAlign="center">
                 <span aria-label="Intents" className={styles.citationPanelHeader}>
-                  Intents
+                  {t('Intents')}
                 </span>
                 <IconButton
                   iconProps={{ iconName: 'Cancel' }}
@@ -1006,8 +1008,8 @@ const Chat = () => {
               <Stack horizontalAlign="space-between">
                 {appStateContext?.state?.answerExecResult[answerId]?.map((execResult: ExecResults, index) => (
                   <Stack className={styles.exectResultList} verticalAlign="space-between">
-                    <><span>Intent:</span> <p>{execResult.intent}</p></>
-                    {execResult.search_query && <><span>Search Query:</span>
+                    <><span>{t('Intent')}</span> <p>{execResult.intent}</p></>
+                    {execResult.search_query && <><span>{t('Search Query')}:</span>
                       <SyntaxHighlighter
                         style={nord}
                         wrapLines={true}
@@ -1017,7 +1019,7 @@ const Chat = () => {
                         {execResult.search_query}
                       </SyntaxHighlighter></>}
                     {execResult.search_result && <><span>Search Result:</span> <p>{execResult.search_result}</p></>}
-                    {execResult.code_generated && <><span>Code Generated:</span>
+                    {execResult.code_generated && <><span>{t('Code Generated')}:</span>
                       <SyntaxHighlighter
                         style={nord}
                         wrapLines={true}

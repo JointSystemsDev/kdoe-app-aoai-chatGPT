@@ -49,6 +49,14 @@ class _UiSettings(BaseSettings):
     favicon: str = "/favicon.ico"
     show_share_button: bool = True
     show_chat_history_button: bool = True
+    # JS specific
+    enable_image_chat: bool = False
+    language: str = "en"
+    additional_header_logo: Optional[str] = None
+    help_link_title: Optional[str] = None
+    help_link_url: Optional[str] = None
+    limit_input_to_characters: int = 5000,
+    appinsights_instrumentationkey: Optional[str] = None
 
 
 class _ChatHistorySettings(BaseSettings):

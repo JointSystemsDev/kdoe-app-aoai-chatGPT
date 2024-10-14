@@ -8,6 +8,7 @@ import styles from './QuestionInput.module.css'
 import { ChatMessage } from '../../api'
 import { AppStateContext } from '../../state/AppProvider'
 import { resizeImage } from '../../utils/resizeImage'
+import { useAppInsights } from '../../ApplicationInsightsSerive'
 
 interface Props {
   onSend: (question: ChatMessage['content'], id?: string) => void
@@ -20,9 +21,11 @@ interface Props {
 export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conversationId }: Props) => {
   const [question, setQuestion] = useState<string>('')
   const [base64Image, setBase64Image] = useState<string | null>(null);
-
+  const appInsights = useAppInsights();
   const appStateContext = useContext(AppStateContext)
-  const OYD_ENABLED = appStateContext?.state.frontendSettings?.oyd_enabled || false;
+  // const OYD_ENABLED = appStateContext?.state.frontendSettings?.oyd_enabled || false;
+
+  const ui = appStateContext?.state.frontendSettings?.ui
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,6 +45,10 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   };
 
   const sendQuestion = () => {
+
+    debugger;
+    appInsights?.trackEvent({ name: `Event: SendQuestion` });
+    
     if (disabled || !question.trim()) {
       return
     }
@@ -69,8 +76,14 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   }
 
   const onQuestionChange = (_ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
-    setQuestion(newValue || '')
-  }
+    if (ui?.limit_input_to_characters && ui?.limit_input_to_characters > 0 && newValue && newValue.length <= ui?.limit_input_to_characters) {
+        setQuestion(newValue);
+    }
+    if (!newValue)
+    {
+        setQuestion("");
+    }
+  };
 
   const sendQuestionDisabled = disabled || !question.trim()
 
@@ -86,7 +99,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
         onChange={onQuestionChange}
         onKeyDown={onEnterPress}
       />
-      {!OYD_ENABLED && (
+      {ui?.enable_image_chat && (
         <div className={styles.fileInputContainer}>
           <input
             type="file"
@@ -118,6 +131,11 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
         )}
       </div>
       <div className={styles.questionInputBottomBorder} />
+      {ui?.limit_input_to_characters && ui?.limit_input_to_characters > 0 && (
+        <div className={styles.characterCount}>
+          {`${question.length}/${ui?.limit_input_to_characters}`}
+        </div>
+      )}
     </Stack>
   )
 }

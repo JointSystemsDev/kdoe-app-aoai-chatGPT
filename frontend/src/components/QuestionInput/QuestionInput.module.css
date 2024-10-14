@@ -94,3 +94,11 @@
 .uploadedImage {
   margin-right: 70px;
 }
+
+.characterCount {
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  font-size: 12px;
+  color: gray;
+}
