@@ -35,6 +35,7 @@ export const en = {
     'Chat history': '',
     'AI-generated content may be incorrect': '',
     'Generating answer...': '',
+    'Upload Image or PDF': '',
   };
 
   // {t('Citations')}

@@ -1,15 +1,19 @@
 import { chatHistorySampleData } from '../constants/chatHistory'
+import { useEnvironment } from '../state/EnvironmentProvider';
 
 import { ChatMessage, Conversation, ConversationRequest, CosmosDBHealth, CosmosDBStatus, UserInfo } from './models'
 
 export async function conversationApi(options: ConversationRequest, abortSignal: AbortSignal): Promise<Response> {
+  const { selectedEnvironment } = useEnvironment();
+  
   const response = await fetch('/conversation', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      messages: options.messages
+      messages: options.messages,
+      environment_id: selectedEnvironment
     }),
     signal: abortSignal
   })
@@ -327,6 +331,7 @@ export const frontendSettings = async (): Promise<Response | null> => {
 
   return response
 }
+
 export const historyMessageFeedback = async (messageId: string, feedback: string): Promise<Response> => {
   const response = await fetch('/history/message_feedback', {
     method: 'POST',

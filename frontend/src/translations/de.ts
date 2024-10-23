@@ -35,4 +35,5 @@ export const de = {
   'Chat history': 'Chatverlauf',
   'AI-generated content may be incorrect': 'AI-generierter Inhalt kann falsch sein.',
   'Generating answer...': 'Erzeuge Antwort',
+  'Bild oder PDF hochladen': '',
 };

@@ -40,7 +40,7 @@ export type AzureSqlServerExecResults = {
 export type ChatMessage = {
   id: string
   role: string
-  content: string | [{ type: string; text: string }, { type: string; image_url: { url: string } }]
+  content: string | [{ type: string; text: string }, { type: string; image_url: { url: string } }] 
   end_turn?: boolean
   date: string
   feedback?: Feedback
@@ -138,6 +138,7 @@ export type UI = {
   help_link_url?: string
   limit_input_to_characters: number,
   appinsights_instrumentationkey?: string,
+  enable_mode_selector?: boolean,
 }
 
 export type FrontendSettings = {

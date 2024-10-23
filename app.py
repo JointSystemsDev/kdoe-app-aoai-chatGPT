@@ -77,6 +77,55 @@ async def favicon():
 async def assets(path):
     return await send_from_directory("static/assets", path)
 
+# Dummy environments data
+dummy_environments = [
+    {
+      "id": "default",
+      "name": "Default Environment (HeDu)"
+    },
+    {
+      "id": "Default",
+      "name": "HeDu"
+    },
+    {
+      "id": "A",
+      "name": "Hermine"
+    },
+    {
+      "id": "B",
+      "name": "Hermine Firmencheck"
+    }
+]
+
+@bp.route("/api/environments", methods=["GET"])
+async def get_environments():
+    return jsonify([{"id": env["id"], "name": env["name"]} for env in dummy_environments])
+
+# @bp.route("/api/environments", methods=["GET"])
+# async def get_environments():
+    # cosmos_client = CosmosClient.from_connection_string(os.environ["AZURE_COSMOS_CONNECTION_STRING"])
+    # database = cosmos_client.get_database_client(os.environ["AZURE_COSMOS_DATABASE"])
+    # container = database.get_container_client("Environments")
+    
+    # query = "SELECT c.id, c.name FROM c"
+    # items = list(container.query_items(query=query, enable_cross_partition_query=True))
+    
+    # return jsonify(items)
+
+@bp.route("/api/set_environment", methods=["POST"])
+async def set_environment():
+    data = await request.get_json()
+    environment_id = data.get("environment_id")
+    
+    if not environment_id:
+        return jsonify({"error": "environment_id is required"}), 400
+    
+    try:
+        # app_settings = _AppSettings.load(environment_id)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 
 # Debug settings
 DEBUG = os.environ.get("DEBUG", "false")
@@ -109,6 +158,7 @@ frontend_settings = {
         "help_link_url": app_settings.ui.help_link_url,
         "limit_input_to_characters": app_settings.ui.limit_input_to_characters,
         "appinsights_instrumentationkey": app_settings.ui.appinsights_instrumentationkey,
+        "enable_mode_selector": app_settings.ui.enable_mode_selector,
     },
     "sanitize_answer": app_settings.base_settings.sanitize_answer,
     "oyd_enabled": app_settings.base_settings.datasource_type,

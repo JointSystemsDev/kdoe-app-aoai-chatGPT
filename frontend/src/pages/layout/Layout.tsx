@@ -11,6 +11,7 @@ import { AppStateContext } from '../../state/AppProvider'
 import styles from './Layout.module.css'
 
 import { t } from '../../utils/localization';
+import { EnvironmentSelector } from '../../components/common/EnvironmentSelector'
 
 const Layout = () => {
   const [isSharePanelOpen, setIsSharePanelOpen] = useState<boolean>(false)
@@ -94,6 +95,11 @@ const Layout = () => {
             )}
           </Stack>
           <Stack horizontal tokens={{ childrenGap: 4 }} className={styles.shareButtonContainer}>
+            {
+              ui?.enable_mode_selector && (
+                <EnvironmentSelector />
+              )
+            }
             {appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && ui?.show_chat_history_button !== false && (
               <HistoryButton
                 onClick={handleHistoryClick}

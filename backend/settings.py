@@ -57,6 +57,7 @@ class _UiSettings(BaseSettings):
     help_link_url: Optional[str] = None
     limit_input_to_characters: int = 5000,
     appinsights_instrumentationkey: Optional[str] = None
+    enable_mode_selector: bool = False
 
 
 class _ChatHistorySettings(BaseSettings):

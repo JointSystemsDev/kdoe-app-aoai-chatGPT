@@ -10,22 +10,25 @@ import { AppStateProvider } from './state/AppProvider'
 
 import './index.css'
 import { AppInsightsContext, initializeAppInsights } from './ApplicationInsightsSerive'
+import { EnvironmentProvider } from './state/EnvironmentProvider'
 
 initializeIcons()
 
 export default function App() {
   return (
     <AppStateProvider>
-      <AppInsightsInitializer>
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Chat />} />
-              <Route path="*" element={<NoPage />} />
-            </Route>
-          </Routes>
-        </HashRouter>
-      </AppInsightsInitializer>
+      <EnvironmentProvider>
+        <AppInsightsInitializer>
+          <HashRouter>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Chat />} />
+                <Route path="*" element={<NoPage />} />
+              </Route>
+            </Routes>
+          </HashRouter>
+        </AppInsightsInitializer>
+      </EnvironmentProvider>
     </AppStateProvider>
   )
 }

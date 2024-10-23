@@ -1,5 +1,5 @@
-import { useContext, useState } from 'react'
-import { FontIcon, Stack, TextField } from '@fluentui/react'
+import { useContext, useEffect, useState } from 'react'
+import { FontIcon, Stack, TextField, TooltipHost } from '@fluentui/react'
 import { SendRegular } from '@fluentui/react-icons'
 
 import Send from '../../assets/Send.svg'
@@ -10,6 +10,9 @@ import { AppStateContext } from '../../state/AppProvider'
 import { resizeImage } from '../../utils/resizeImage'
 import { useAppInsights } from '../../ApplicationInsightsSerive'
 
+import { t } from '../../utils/localization'
+import * as pdfjsLib from 'pdfjs-dist';
+
 interface Props {
   onSend: (question: ChatMessage['content'], id?: string) => void
   disabled: boolean
@@ -18,22 +21,67 @@ interface Props {
   conversationId?: string
 }
 
+type PageContents = {
+  pageNumber: number;
+  textContent: string;
+}
+
 export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conversationId }: Props) => {
   const [question, setQuestion] = useState<string>('')
   const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [pdfContent, setPdfContent] = useState<string | null>(null);
   const appInsights = useAppInsights();
   const appStateContext = useContext(AppStateContext)
   // const OYD_ENABLED = appStateContext?.state.frontendSettings?.oyd_enabled || false;
 
   const ui = appStateContext?.state.frontendSettings?.ui
+  
+  useEffect(() => {
+    const loadWorker = async () => {
+    // @ts-ignore
+      const worker = await import('pdfjs-dist/build/pdf.worker.mjs');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = worker.default;
+    };
+    loadWorker();
+  }, []);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (file) {
-      await convertToBase64(file);
-    }
-  };
+
+      if (file.type === 'application/pdf') {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+          const pdf = await loadingTask.promise;
+          const numPages = pdf.numPages;
+          const pages: PageContents[] = [];
+          for (let i = 1; i <= numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            pages.push({
+              pageNumber: i,
+              textContent: textContent.items.map(item => {
+                // Check if the item has 'str' property, otherwise use an empty string
+                return 'str' in item ? item.str : '';
+              }).join(' ')
+            })
+          }	
+          const pdfString = pages.map(page => `Page Number: ${page.pageNumber}\n` + page.textContent).join(' ');
+          setPdfContent(pdfString);
+          console.log(pdfString);
+        } catch (err) {
+          console.error('Error:', 'Could not load PDF ' + err);
+          setPdfContent(null);
+        }
+      }
+      // Image files
+      else {
+        await convertToBase64(file);
+      }
+    };
+  }
 
   const convertToBase64 = async (file: Blob) => {
     try {
@@ -46,25 +94,35 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
 
   const sendQuestion = () => {
 
-    debugger;
     appInsights?.trackEvent({ name: `Event: SendQuestion` });
-    
+
     if (disabled || !question.trim()) {
-      return
+      return;
     }
 
-    const questionTest: ChatMessage["content"] = base64Image ? [{ type: "text", text: question }, { type: "image_url", image_url: { url: base64Image } }] : question.toString();
+    // Create a local updatedQuestion variable to store the modified question
+    let updatedQuestion = question;
+
+    if (pdfContent) {
+      updatedQuestion = question + ' from here this is the content the text above refers to: ' + pdfContent;
+      setQuestion(updatedQuestion); // Update state with the modified question
+    }
+
+    // Use the updatedQuestion variable instead of the state directly
+    const questionTest: ChatMessage["content"] = base64Image 
+      ? [{ type: "text", text: updatedQuestion }, { type: "image_url", image_url: { url: base64Image } }]
+      : updatedQuestion.toString();
 
     if (conversationId && questionTest !== undefined) {
-      onSend(questionTest, conversationId)
-      setBase64Image(null)
+      onSend(questionTest, conversationId);
+      setBase64Image(null);
     } else {
-      onSend(questionTest)
-      setBase64Image(null)
+      onSend(questionTest);
+      setBase64Image(null);
     }
 
     if (clearOnSend) {
-      setQuestion('')
+      setQuestion('');
     }
   }
 
@@ -104,17 +162,20 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
           <input
             type="file"
             id="fileInput"
-            onChange={(event) => handleImageUpload(event)}
-            accept="image/*"
+            onChange={(event) => handleImageUpload(event)} // TODO change to fileupload
+            accept="image/*,.pdf"
             className={styles.fileInput}
           />
-          <label htmlFor="fileInput" className={styles.fileLabel} aria-label='Upload Image'>
-            <FontIcon
-              className={styles.fileIcon}
-              iconName={'PhotoCollection'}
-              aria-label='Upload Image'
-            />
-          </label>
+          <TooltipHost content={t('Upload Image or PDF')} id='uplodbutton'>
+            <label htmlFor="fileInput" className={styles.fileLabel} aria-label='Upload Image or PDF' aria-describedby='uplodbutton'>
+              <FontIcon
+                className={styles.fileIcon}
+                iconName={'Attach'}
+                aria-label='Upload Image or PDF'
+                aria-describedby='uplodbutton'
+              />
+            </label>
+          </TooltipHost>
         </div>)}
       {base64Image && <img className={styles.uploadedImage} src={base64Image} alt="Uploaded Preview" />}
       <div
