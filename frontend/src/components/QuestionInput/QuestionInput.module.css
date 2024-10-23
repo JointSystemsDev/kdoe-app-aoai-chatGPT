@@ -57,6 +57,19 @@
   height: 30px;
 }
 
+.pdfPreview {
+  align-items: center;
+  margin-top: 14px;
+  margin-right: -2px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.pdfPreviewIcon {
+  font-size: 24px;
+  color: #d83b01;
+}
+
 @media (max-width: 480px) {
   .questionInputContainer {
     left: 16.5%;

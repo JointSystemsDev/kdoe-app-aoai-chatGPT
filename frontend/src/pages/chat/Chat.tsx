@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useContext, useLayoutEffect } from 'react'
-import { CommandBarButton, IconButton, Dialog, DialogType, Stack } from '@fluentui/react'
+import { CommandBarButton, IconButton, Dialog, DialogType, Stack, FontIcon } from '@fluentui/react'
 import { SquareRegular, ShieldLockRegular, ErrorCircleRegular } from '@fluentui/react-icons'
 
 import ReactMarkdown from 'react-markdown'
@@ -34,6 +34,8 @@ import {
   CosmosDBStatus,
   ErrorMessage,
   ExecResults,
+  isImageContent,
+  isPdfContent,
 } from "../../api";
 import { Answer } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
@@ -187,13 +189,22 @@ const Chat = () => {
     const abortController = new AbortController()
     abortFuncs.current.unshift(abortController)
 
-    const questionContent = typeof question === 'string' ? question : [{ type: "text", text: question[0].text }, { type: "image_url", image_url: { url: question[1].image_url.url } }]
-    question = typeof question !== 'string' && question[0]?.text?.length > 0 ? question[0].text : question
+    let questionDisplay: string;
+    let questionToSend = question;
+
+    if (isImageContent(question)) {
+      // Now TypeScript knows question[0] is TextContent
+      questionDisplay = question[0].text;
+    } else if (isPdfContent(question)) {
+      questionDisplay = question[0];
+    } else {
+      questionDisplay = question as string;
+    }
 
     const userMessage: ChatMessage = {
       id: uuid(),
       role: 'user',
-      content: questionContent as string,
+      content: questionToSend,
       date: new Date().toISOString()
     }
 
@@ -313,16 +324,14 @@ const Chat = () => {
     setShowLoadingMessage(true)
     const abortController = new AbortController()
     abortFuncs.current.unshift(abortController)
-    const questionContent = typeof question === 'string' ? question : [{ type: "text", text: question[0].text }, { type: "image_url", image_url: { url: question[1].image_url.url } }]
-    question = typeof question !== 'string' && question[0]?.text?.length > 0 ? question[0].text : question
-
+  
     const userMessage: ChatMessage = {
       id: uuid(),
       role: 'user',
-      content: questionContent as string,
+      content: question,
       date: new Date().toISOString()
     }
-
+  
     let request: ConversationRequest
     let conversation
     if (conversationId) {
@@ -345,8 +354,10 @@ const Chat = () => {
       }
       setMessages(request.messages)
     }
+  
     let result = {} as ChatResponse
     var errorResponseMessage = 'Please try again. If the problem persists, please contact the site administrator.'
+    
     try {
       const response = conversationId
         ? await historyGenerate(request, abortController.signal, conversationId)
@@ -803,10 +814,36 @@ const Chat = () => {
                   <>
                     {answer.role === 'user' ? (
                       <div className={styles.chatMessageUser} tabIndex={0}>
-                        <div className={styles.chatMessageUserMessage}>
-                          {typeof answer.content === "string" && answer.content ? answer.content : Array.isArray(answer.content) ? <>{answer.content[0].text} <img className={styles.uploadedImageChat} src={answer.content[1].image_url.url} alt="Uploaded Preview" /></> : null}
-                        </div>
+                      <div className={styles.chatMessageUserMessage}>
+                        {Array.isArray(answer.content) ? (
+                          isImageContent(answer.content) ? (
+                            <>
+                              {answer.content[0].text}
+                              <img 
+                                className={styles.uploadedImageChat} 
+                                src={(answer.content[1] as { type: string; image_url: { url: string } }).image_url.url} 
+                                alt="Uploaded Preview" 
+                              />
+                            </>
+                          ) : isPdfContent(answer.content) ? (
+                            <>
+                              {answer.content[0]}
+                              <FontIcon
+                                className={styles.pdfIcon}
+                                iconName="PDF"
+                                aria-label="PDF Document"
+                              />
+                            </>
+                          ) : (
+                            // Regular array content
+                            answer.content[0]
+                          )
+                        ) : (
+                          // Regular string content
+                          answer.content
+                        )}
                       </div>
+                    </div>
                     ) : answer.role === 'assistant' ? (
                       <div className={styles.chatMessageGpt}>
                         {typeof answer.content === "string" && <Answer

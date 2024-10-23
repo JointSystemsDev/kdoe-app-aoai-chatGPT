@@ -277,22 +277,32 @@ def prepare_model_args(request_body, request_headers):
 
     for message in request_messages:
         if message:
-            if message["role"] == "assistant" and "context" in message:
-                context_obj = json.loads(message["context"])
-                messages.append(
-                    {
-                        "role": message["role"],
-                        "content": message["content"],
-                        "context": context_obj
-                    }
-                )
+            content = message["content"]
+            # Handle array content types
+            if isinstance(content, list):
+                if len(content) == 2:
+                    # Check if it's an image message
+                    if isinstance(content[0], dict) and 'type' in content[0]:
+                        # Keep image messages as is
+                        messages.append({
+                            "role": message["role"],
+                            "content": content
+                        })
+                    else:
+                        # For PDF content, join with separator
+                        messages.append({
+                            "role": message["role"],
+                            "content": f"{content[0]}\n\nAdditional Context:\n{content[1]}"
+                        })
+                else:
+                    # Invalid array format
+                    raise ValueError("Invalid message format")
             else:
-                messages.append(
-                    {
-                        "role": message["role"],
-                        "content": message["content"]
-                    }
-                )
+                # Regular string content
+                messages.append({
+                    "role": message["role"],
+                    "content": content
+                })
 
     user_json = None
     if (MS_DEFENDER_ENABLED):
@@ -468,7 +478,13 @@ async def conversation():
         return jsonify({"error": "request must be json"}), 415
     request_json = await request.get_json()
 
-    return await conversation_internal(request_json, request.headers)
+    try:
+        return await conversation_internal(request_json, request.headers)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as ex:
+        logging.exception(ex)
+        return jsonify({"error": str(ex)}), 500
 
 
 @bp.route("/frontend_settings", methods=["GET"])
@@ -921,23 +937,53 @@ async def generate_title(conversation_messages) -> str:
     ## make sure the messages are sorted by _ts descending
     title_prompt = "Summarize the conversation so far into a 4-word or less title. Do not use any quotation marks or punctuation. Do not include any other commentary or description."
 
-    messages = [
-        {"role": msg["role"], "content": msg["content"]}
-        for msg in conversation_messages
-    ]
-    messages.append({"role": "user", "content": title_prompt})
+    # Process messages to handle array content types
+    processed_messages = []
+    for msg in conversation_messages:
+        processed_msg = {"role": msg["role"]}
+        
+        content = msg["content"]
+        # Handle array content types
+        if isinstance(content, list):
+            if len(content) == 2:
+                if isinstance(content[0], dict) and 'type' in content[0]:
+                    # For image messages, use the text content
+                    processed_msg["content"] = content[0]["text"]
+                else:
+                    # For PDF content, use the first message
+                    processed_msg["content"] = content[0]
+            else:
+                # Invalid array format
+                processed_msg["content"] = "Invalid message format"
+        else:
+            # Regular string content
+            processed_msg["content"] = content
+            
+        processed_messages.append(processed_msg)
+
+    # Add the title prompt
+    processed_messages.append({"role": "user", "content": title_prompt})
 
     try:
         azure_openai_client = await init_openai_client()
         response = await azure_openai_client.chat.completions.create(
-            model=app_settings.azure_openai.model, messages=messages, temperature=1, max_tokens=64
+            model=app_settings.azure_openai.model,
+            messages=processed_messages,
+            temperature=1,
+            max_tokens=64
         )
 
         title = response.choices[0].message.content
         return title
     except Exception as e:
-        logging.exception("Exception while generating title", e)
-        return messages[-2]["content"]
+        logging.exception("Exception while generating title")
+        # Return a default title or first few words of the last message
+        last_message = processed_messages[-2] if len(processed_messages) > 1 else None
+        if last_message:
+            # Take first few words of the last user message
+            words = last_message["content"].split()[:4]
+            return " ".join(words)
+        return "New Conversation"
 
 
 app = create_app()

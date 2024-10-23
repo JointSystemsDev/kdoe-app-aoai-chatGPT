@@ -37,14 +37,45 @@ export type AzureSqlServerExecResults = {
   all_exec_results: AzureSqlServerExecResult[]
 }
 
+export type TextContent = {
+  type: "text";
+  text: string;
+}
+
+export type ImageUrlContent = {
+  type: "image_url";
+  image_url: {
+    url: string;
+  };
+}
+
+export type ImageMessageContent = [TextContent, ImageUrlContent];
+
 export type ChatMessage = {
   id: string
   role: string
-  content: string | [{ type: string; text: string }, { type: string; image_url: { url: string } }] 
+  content: string | string[] | ImageMessageContent
   end_turn?: boolean
   date: string
   feedback?: Feedback
   context?: string
+}
+
+// Add type guard functions
+export const isImageContent = (content: any): content is ImageMessageContent => {
+  return Array.isArray(content) && 
+         content.length === 2 && 
+         content[0]?.type === 'text' &&
+         content[1]?.type === 'image_url' &&
+         'text' in content[0] &&
+         'image_url' in content[1];
+}
+
+export const isPdfContent = (content: any): content is string[] => {
+  return Array.isArray(content) && 
+         content.length === 2 && 
+         typeof content[0] === 'string' &&
+         typeof content[1] === 'string';
 }
 
 export type ExecResults = {

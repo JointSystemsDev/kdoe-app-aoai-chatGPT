@@ -93,38 +93,43 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   };
 
   const sendQuestion = () => {
-
     appInsights?.trackEvent({ name: `Event: SendQuestion` });
-
+  
     if (disabled || !question.trim()) {
       return;
     }
-
-    // Create a local updatedQuestion variable to store the modified question
-    let updatedQuestion = question;
-
-    if (pdfContent) {
-      updatedQuestion = question + ' from here this is the content the text above refers to: ' + pdfContent;
-      setQuestion(updatedQuestion); // Update state with the modified question
+  
+    let questionContent: ChatMessage["content"];
+    
+    if (base64Image) {
+      // Handle image content
+      questionContent = [
+        { type: "text", text: question }, 
+        { type: "image_url", image_url: { url: base64Image } }
+      ];
+    } else if (pdfContent) {
+      // Handle PDF content
+      questionContent = [question, pdfContent];
+    } else {
+      // Handle regular text content
+      questionContent = question;
     }
-
-    // Use the updatedQuestion variable instead of the state directly
-    const questionTest: ChatMessage["content"] = base64Image 
-      ? [{ type: "text", text: updatedQuestion }, { type: "image_url", image_url: { url: base64Image } }]
-      : updatedQuestion.toString();
-
-    if (conversationId && questionTest !== undefined) {
-      onSend(questionTest, conversationId);
+  
+    if (conversationId && questionContent !== undefined) {
+      onSend(questionContent, conversationId);
+      setPdfContent(null);
       setBase64Image(null);
     } else {
-      onSend(questionTest);
+      onSend(questionContent);
+      setPdfContent(null);
       setBase64Image(null);
     }
-
+  
     if (clearOnSend) {
       setQuestion('');
     }
   }
+ 
 
   const onEnterPress = (ev: React.KeyboardEvent<Element>) => {
     if (ev.key === 'Enter' && !ev.shiftKey && !(ev.nativeEvent?.isComposing === true)) {
@@ -178,6 +183,17 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
           </TooltipHost>
         </div>)}
       {base64Image && <img className={styles.uploadedImage} src={base64Image} alt="Uploaded Preview" />}
+      {pdfContent && (
+        <div className={styles.pdfIndicator}>
+          <TooltipHost content="PDF uploaded" id="pdfIndicator">
+            <FontIcon
+              className={styles.pdfIcon}
+              iconName="PDF"
+              aria-label="PDF Document Ready"
+            />
+          </TooltipHost>
+        </div>
+      )}
       <div
         className={styles.questionInputSendButtonContainer}
         role="button"
