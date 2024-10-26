@@ -195,3 +195,8 @@ export enum Feedback {
   Manipulative = 'manipulative',
   OtherHarmful = 'other_harmlful'
 }
+
+export type Environment = {
+  id: string
+  name: string
+}

@@ -18,6 +18,7 @@ import {
 } from '../api'
 
 import { appStateReducer } from './AppReducer'
+import { useEnvironment } from './EnvironmentProvider'
 
 export interface AppState {
   isChatHistoryOpen: boolean
@@ -51,6 +52,7 @@ export type Action =
   }
   | { type: 'GET_FEEDBACK_STATE'; payload: string }
   | { type: 'SET_ANSWER_EXEC_RESULT'; payload: { answerId: string, exec_result: [] } }
+  | { type: 'RESET_CHAT_STATE' }
 
 const initialState: AppState = {
   isChatHistoryOpen: false,
@@ -82,6 +84,7 @@ type AppStateProviderProps = {
 
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appStateReducer, initialState)
+  const { selectedEnvironment } = useEnvironment();
 
   useEffect(() => {
     // Check for cosmosdb config and fetch initial data here
@@ -142,9 +145,14 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     getHistoryEnsure()
   }, [])
 
+  // Effect for handling environment changes
   useEffect(() => {
+    // Clear current chat when environment changes
+    dispatch({ type: 'RESET_CHAT_STATE' });
+    
+    // Fetch new frontend settings for the selected environment
     const getFrontendSettings = async () => {
-      frontendSettings()
+      frontendSettings(selectedEnvironment ?? undefined)
         .then(response => {
           dispatch({ type: 'FETCH_FRONTEND_SETTINGS', payload: response as FrontendSettings })
         })
@@ -153,7 +161,7 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
         })
     }
     getFrontendSettings()
-  }, [])
+  }, [selectedEnvironment])
 
   return <AppStateContext.Provider value={{ state, dispatch }}>{children}</AppStateContext.Provider>
 }

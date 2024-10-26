@@ -5,6 +5,8 @@ import logging
 import uuid
 import httpx
 import asyncio
+from typing import List, Optional
+from typing import Dict, Union
 from quart import (
     Blueprint,
     Quart,
@@ -35,6 +37,36 @@ from backend.utils import (
     convert_to_pf_format,
     format_pf_non_streaming_response,
 )
+
+class Environment:
+    def __init__(self, id: str, name: str, settings: dict):
+        self.id = id
+        self.name = name
+        self.settings = settings
+
+# Dummy environments data - in production this would come from Cosmos DB
+ENVIRONMENTS: Dict[str, Environment] = {
+    "default": Environment(
+        "default",
+        "Default Environment",
+        {
+            "title": "Contoso Default",
+            "chat_title": "Default Environment",
+            "chat_description": "This is the default environment",
+            "logo": None,
+            "chat_logo": None,
+            "show_share_button": True,
+            "show_chat_history_button": True,
+            "enable_image_chat": True,
+            "language": "en",
+            "additional_header_logo": None,
+            "help_link_title": "Default Help",
+            "help_link_url": "https://staging-help.contoso.com",
+            "limit_input_to_characters": 7500,
+            "enable_mode_selector": True
+        }
+    )
+}
 
 bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
@@ -77,53 +109,29 @@ async def favicon():
 async def assets(path):
     return await send_from_directory("static/assets", path)
 
-# Dummy environments data
-dummy_environments = [
-    {
-      "id": "default",
-      "name": "Default Environment (HeDu)"
-    },
-    {
-      "id": "Default",
-      "name": "HeDu"
-    },
-    {
-      "id": "A",
-      "name": "Hermine"
-    },
-    {
-      "id": "B",
-      "name": "Hermine Firmencheck"
-    }
-]
 
 @bp.route("/api/environments", methods=["GET"])
 async def get_environments():
-    return jsonify([{"id": env["id"], "name": env["name"]} for env in dummy_environments])
+    """Get list of available environments"""
+    environments = [{"id": env.id, "name": env.name} for env in ENVIRONMENTS.values()]
+    return jsonify(environments)
 
-# @bp.route("/api/environments", methods=["GET"])
-# async def get_environments():
-    # cosmos_client = CosmosClient.from_connection_string(os.environ["AZURE_COSMOS_CONNECTION_STRING"])
-    # database = cosmos_client.get_database_client(os.environ["AZURE_COSMOS_DATABASE"])
-    # container = database.get_container_client("Environments")
-    
-    # query = "SELECT c.id, c.name FROM c"
-    # items = list(container.query_items(query=query, enable_cross_partition_query=True))
-    
-    # return jsonify(items)
 
-@bp.route("/api/set_environment", methods=["POST"])
-async def set_environment():
-    data = await request.get_json()
-    environment_id = data.get("environment_id")
-    
-    if not environment_id:
-        return jsonify({"error": "environment_id is required"}), 400
-    
+@bp.route("/frontend_settings", methods=["GET"])
+async def get_frontend_settings():
+    """Get frontend settings, optionally for a specific environment"""
+    env_id = request.args.get("env", "default")
     try:
-        # app_settings = _AppSettings.load(environment_id)
-        return jsonify({"success": True})
+        # Get base settings
+        settings = frontend_settings
+
+        # If environment is specified, override with environment-specific settings
+        if env_id and env_id in ENVIRONMENTS:
+            settings["ui"] = ENVIRONMENTS[env_id].settings
+        
+        return jsonify(settings), 200
     except Exception as e:
+        logging.exception("Exception in /frontend_settings")
         return jsonify({"error": str(e)}), 500
     
 
@@ -485,15 +493,6 @@ async def conversation():
     except Exception as ex:
         logging.exception(ex)
         return jsonify({"error": str(ex)}), 500
-
-
-@bp.route("/frontend_settings", methods=["GET"])
-def get_frontend_settings():
-    try:
-        return jsonify(frontend_settings), 200
-    except Exception as e:
-        logging.exception("Exception in /frontend_settings")
-        return jsonify({"error": str(e)}), 500
 
 
 ## Conversation History API ##

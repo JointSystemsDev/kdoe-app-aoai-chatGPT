@@ -7,17 +7,17 @@ import Chat from './pages/chat/Chat'
 import Layout from './pages/layout/Layout'
 import NoPage from './pages/NoPage'
 import { AppStateProvider } from './state/AppProvider'
+import { EnvironmentProvider } from './state/EnvironmentProvider'
+import { AppInsightsContext, initializeAppInsights } from './ApplicationInsightsSerive'
 
 import './index.css'
-import { AppInsightsContext, initializeAppInsights } from './ApplicationInsightsSerive'
-import { EnvironmentProvider } from './state/EnvironmentProvider'
 
 initializeIcons()
 
 export default function App() {
   return (
-    <AppStateProvider>
-      <EnvironmentProvider>
+    <EnvironmentProvider>
+      <AppStateProvider>
         <AppInsightsInitializer>
           <HashRouter>
             <Routes>
@@ -28,8 +28,8 @@ export default function App() {
             </Routes>
           </HashRouter>
         </AppInsightsInitializer>
-      </EnvironmentProvider>
-    </AppStateProvider>
+      </AppStateProvider>
+    </EnvironmentProvider>
   )
 }
 
@@ -38,7 +38,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   // </React.StrictMode>
 )
-
 
 const AppInsightsInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const appInsights = initializeAppInsights();
@@ -49,4 +48,3 @@ const AppInsightsInitializer: React.FC<{ children: React.ReactNode }> = ({ child
     </AppInsightsContext.Provider>
   );
 };
-

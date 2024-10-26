@@ -42,6 +42,7 @@ import { QuestionInput } from "../../components/QuestionInput";
 import { ChatHistoryPanel } from "../../components/ChatHistory/ChatHistoryPanel";
 import { AppStateContext } from "../../state/AppProvider";
 import { useBoolean } from "@fluentui/react-hooks";
+import { useEnvironment } from '../../state/EnvironmentProvider'
 
 const enum messageStatus {
   NotRunning = 'Not Running',
@@ -51,6 +52,7 @@ const enum messageStatus {
 
 const Chat = () => {
   const appStateContext = useContext(AppStateContext)
+  const { selectedEnvironment } = useEnvironment()
   const ui = appStateContext?.state.frontendSettings?.ui
   const AUTH_ENABLED = appStateContext?.state.frontendSettings?.auth_enabled
   const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null)
@@ -69,6 +71,15 @@ const Chat = () => {
   const [errorMsg, setErrorMsg] = useState<ErrorMessage | null>()
   const [logo, setLogo] = useState('')
   const [answerId, setAnswerId] = useState<string>('')
+
+   // Function to process logo URL (keep consistent with Layout.tsx)
+   const processLogoUrl = (logoPath: string | null | undefined) => {
+    if (!logoPath) return Contoso;
+    if (logoPath.startsWith('http') || logoPath.startsWith('data:')) {
+      return logoPath;
+    }
+    return logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+  }
 
   const errorDialogContentProps = {
     type: DialogType.close,
@@ -102,6 +113,14 @@ const Chat = () => {
       toggleErrorDialog()
     }
   }, [appStateContext?.state.isCosmosDBAvailable])
+
+  useEffect(() => {
+    if (!appStateContext?.state.isLoading) {
+      const logoUrl = processLogoUrl(ui?.chat_logo || ui?.logo);
+      console.log('Setting chat logo to:', logoUrl); // Debug log
+      setLogo(logoUrl);
+    }
+  }, [appStateContext?.state.isLoading, ui?.chat_logo, ui?.logo, selectedEnvironment]);
 
   const handleErrorDialogClose = () => {
     toggleErrorDialog()
@@ -804,7 +823,7 @@ const Chat = () => {
           <div className={styles.chatContainer}>
             {!messages || messages.length < 1 ? (
               <Stack className={styles.chatEmptyState}>
-                <img src={logo} className={styles.chatIcon} aria-hidden="true" />
+                <img src={logo} className={styles.chatIcon} aria-hidden="true" onError={() => setLogo(Contoso)} />
                 <h1 className={styles.chatEmptyStateTitle}>{ui?.chat_title}</h1>
                 <h2 className={styles.chatEmptyStateSubtitle}>{ui?.chat_description}</h2>
               </Stack>

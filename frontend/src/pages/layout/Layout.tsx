@@ -12,6 +12,7 @@ import styles from './Layout.module.css'
 
 import { t } from '../../utils/localization';
 import { EnvironmentSelector } from '../../components/common/EnvironmentSelector'
+import { useEnvironment } from '../../state/EnvironmentProvider'
 
 const Layout = () => {
   const [isSharePanelOpen, setIsSharePanelOpen] = useState<boolean>(false)
@@ -22,6 +23,7 @@ const Layout = () => {
   // const [showHistoryLabel, setShowHistoryLabel] = useState<string>('Show chat history')
   const [logo, setLogo] = useState('')
   const appStateContext = useContext(AppStateContext)
+  const { selectedEnvironment } = useEnvironment()
   const ui = appStateContext?.state.frontendSettings?.ui
 
   const handleShareClick = () => {
@@ -42,6 +44,23 @@ const Layout = () => {
   const handleHistoryClick = () => {
     appStateContext?.dispatch({ type: 'TOGGLE_CHAT_HISTORY' })
   }
+
+  // Function to process logo URL
+  const processLogoUrl = (logoPath: string | null | undefined) => {
+    if (!logoPath) return Contoso;
+    if (logoPath.startsWith('http') || logoPath.startsWith('data:')) {
+      return logoPath;
+    }
+    // Handle relative paths - you might need to adjust this based on your setup
+    return logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+  }
+
+  useEffect(() => {
+    if (!appStateContext?.state.isLoading) {
+      const logoUrl = processLogoUrl(ui?.logo);
+      setLogo(logoUrl);
+    }
+  }, [appStateContext?.state.isLoading, ui?.logo, selectedEnvironment]);
 
   useEffect(() => {
     if (!appStateContext?.state.isLoading) {
@@ -79,7 +98,7 @@ const Layout = () => {
       <header className={styles.header} role={'banner'}>
         <Stack horizontal verticalAlign="center" horizontalAlign="space-between">
           <Stack horizontal verticalAlign="center">
-            <img src={logo} className={styles.headerIcon} aria-hidden="true" alt="" />
+            <img src={logo} className={styles.headerIcon} aria-hidden="true" alt="" onError={() => setLogo(Contoso)} />
             <Link to="/" className={styles.headerTitleContainer}>
               <h1 className={styles.headerTitle}>{ui?.title}</h1>
             </Link>

@@ -1,0 +1,67 @@
+.environmentSelector {
+    position: relative;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.dropdown {
+    width: 400px !important;
+}
+
+.environmentSelector.transitioning {
+    pointer-events: none;
+}
+
+.fadeOut {
+    opacity: 0;
+}
+
+.fadeIn {
+    opacity: 1;
+}
+
+.spinnerContainer {
+    padding: 8px 16px;
+    width: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.errorMessage {
+    padding: 8px;
+    color: #a4262c;
+    background-color: #fed9cc;
+    border: 1px solid #a4262c;
+    border-radius: 2px;
+    margin-bottom: 8px;
+    width: 400px;
+}
+
+/* Ensure smooth animations */
+.environmentSelector {
+    will-change: opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Animation keyframes for more complex transitions if needed */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Ensure spinner container matches dropdown width */
+.spinnerContainer {
+    width: 400px;
+}
+
+/* Make error message match dropdown width */
+.errorMessage {
+    width: 400px;
+}

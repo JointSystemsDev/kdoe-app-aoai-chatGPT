@@ -82,6 +82,14 @@ export const appStateReducer = (state: AppState, action: Action): AppState => {
           [action.payload.answerId]: action.payload.exec_result
         }
       }
+    case 'RESET_CHAT_STATE':
+        return {
+          ...state,
+          currentChat: null,
+          filteredChatHistory: null,
+          feedbackState: {},
+          answerExecResult: {},
+        }
     default:
       return state
   }

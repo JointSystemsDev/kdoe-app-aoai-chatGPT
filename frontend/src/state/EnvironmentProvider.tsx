@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-// import { useSearchParams } from 'react-router-dom';
+import { fetchEnvironments } from '../api';
 
 interface Environment {
   id: string;
@@ -10,6 +10,8 @@ interface EnvironmentContextType {
   environments: Environment[];
   selectedEnvironment: string | null;
   setSelectedEnvironment: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
@@ -17,40 +19,72 @@ const EnvironmentContext = createContext<EnvironmentContextType | undefined>(und
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
-//   const [searchParams, setSearchParams] = useSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // url param env
+  // Helper function to get environment from URL
+  const getEnvironmentFromUrl = (): string | null => {
+    const hash = window.location.hash;
+    const searchParams = new URLSearchParams(hash.split('?')[1] || '');
+    return searchParams.get('env');
+  };
+
+  // Helper function to update URL with environment
+  const updateUrlWithEnvironment = (envId: string) => {
+    const hash = window.location.hash;
+    const [basePath, search] = hash.split('?');
+    const searchParams = new URLSearchParams(search || '');
+    searchParams.set('env', envId);
+    
+    // Preserve the base hash path (everything before the ?)
+    const newHash = `${basePath || '#/'}?${searchParams.toString()}`;
+    window.location.hash = newHash;
+  };
+
   useEffect(() => {
-    fetchEnvironments();
-    // const envId = searchParams.get('env');
-    // if (envId) {
-    //   setSelectedEnvironment(envId);
-    // }
+    loadEnvironments();
+
+    // Listen for hash changes
+    const handleHashChange = () => {
+      const envId = getEnvironmentFromUrl();
+      if (envId && environments.some(env => env.id === envId) && envId !== selectedEnvironment) {
+        setSelectedEnvironment(envId);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const fetchEnvironments = async () => {
-    const response = await fetch('/api/environments');
-    const data = await response.json();
-    setEnvironments(data);
-    if (data.length > 0 && !selectedEnvironment) {
-      setSelectedEnvironment(data[0].id);
+  const loadEnvironments = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await fetchEnvironments();
+      setEnvironments(data);
+      
+      // Check URL parameter first
+      const envId = getEnvironmentFromUrl();
+      if (envId && data.some(env => env.id === envId)) {
+        setSelectedEnvironment(envId);
+      } else if (data.length > 0 && !selectedEnvironment) {
+        // If no valid URL parameter, set default environment
+        setSelectedEnvironment(data[0].id);
+        // Update URL with default environment
+        updateUrlWithEnvironment(data[0].id);
+      }
+    } catch (err) {
+      setError('Failed to load environments. Please try again later.');
+      console.error('Error loading environments:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const setEnvironment = async (environmentId: string) => {
-    const response = await fetch('/api/set_environment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ environment_id: environmentId }),
-    });
-    if (response.ok) {
-    //   setSearchParams({ env: environmentId });
-      setSelectedEnvironment(environmentId);
-    } else {
-      console.error('Failed to set environment');
-    }
+  const setEnvironment = (environmentId: string) => {
+    setSelectedEnvironment(environmentId);
+    // Update URL when environment changes
+    updateUrlWithEnvironment(environmentId);
   };
 
   return (
@@ -58,7 +92,9 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
       value={{ 
         environments, 
         selectedEnvironment, 
-        setSelectedEnvironment: setEnvironment 
+        setSelectedEnvironment: setEnvironment,
+        isLoading,
+        error
       }}
     >
       {children}

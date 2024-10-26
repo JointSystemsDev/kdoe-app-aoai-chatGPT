@@ -7,3 +7,7 @@ __pycache__/
 .ipynb_checkpoints/
 static/assets
 static/index.html
+shortpdftest.pdf
+.env.kdoe.txt
+dummy-environments.json
+.env.environments.json

@@ -1,7 +1,7 @@
 import { chatHistorySampleData } from '../constants/chatHistory'
 import { useEnvironment } from '../state/EnvironmentProvider';
 
-import { ChatMessage, Conversation, ConversationRequest, CosmosDBHealth, CosmosDBStatus, UserInfo } from './models'
+import { ChatMessage, Conversation, ConversationRequest, CosmosDBHealth, CosmosDBStatus, UserInfo, Environment } from './models'
 
 export async function conversationApi(options: ConversationRequest, abortSignal: AbortSignal): Promise<Response> {
   const { selectedEnvironment } = useEnvironment();
@@ -317,8 +317,12 @@ export const historyEnsure = async (): Promise<CosmosDBHealth> => {
   return response
 }
 
-export const frontendSettings = async (): Promise<Response | null> => {
-  const response = await fetch('/frontend_settings', {
+export const frontendSettings = async (environmentId?: string): Promise<Response | null> => {
+  const url = environmentId 
+    ? `/frontend_settings?env=${environmentId}`
+    : '/frontend_settings';
+    
+  const response = await fetch(url, {
     method: 'GET'
   })
     .then(res => {
@@ -330,6 +334,17 @@ export const frontendSettings = async (): Promise<Response | null> => {
     })
 
   return response
+}
+
+export const fetchEnvironments = async (): Promise<Environment[]> => {
+  try {
+    const response = await fetch('/api/environments');
+    const data = await response.json();
+    return data as Environment[];
+  } catch (error) {
+    console.error('Error fetching environments:', error);
+    return [];
+  }
 }
 
 export const historyMessageFeedback = async (messageId: string, feedback: string): Promise<Response> => {

@@ -184,15 +184,15 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
         </div>)}
       {base64Image && <img className={styles.uploadedImage} src={base64Image} alt="Uploaded Preview" />}
       {pdfContent && (
-        <div className={styles.pdfIndicator}>
-          <TooltipHost content="PDF uploaded" id="pdfIndicator">
+        <TooltipHost content="PDF uploaded" id="pdfIndicator">
+          <div className={styles.pdfPreview}>
             <FontIcon
-              className={styles.pdfIcon}
+              className={styles.pdfPreviewIcon}
               iconName="PDF"
               aria-label="PDF Document Ready"
             />
-          </TooltipHost>
-        </div>
+          </div>
+        </TooltipHost>
       )}
       <div
         className={styles.questionInputSendButtonContainer}
