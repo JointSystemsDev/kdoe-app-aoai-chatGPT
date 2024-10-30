@@ -767,9 +767,30 @@ class _BaseSettings(BaseSettings):
     use_promptflow: bool = False
 
 
+
+class _AzureStorageSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="AZURE_STORAGE_",
+        env_file=DOTENV_PATH,
+        extra="ignore",
+        env_ignore_empty=True
+    )
+
+    connection_string: Optional[str] = None
+    table: str = "ChabotConfigInternal"  # default table name
+    cache_ttl: int = Field(default=3600, validation_alias="ENVIRONMENT_CACHE_TTL")  # 1 hour default
+
+    @model_validator(mode="after")
+    def validate_connection(self) -> Self:
+        if not self.connection_string:
+            logging.warning("Azure Storage connection string not configured")
+        return self
+    
+    
 class _AppSettings(BaseModel):
     base_settings: _BaseSettings = _BaseSettings()
     azure_openai: _AzureOpenAISettings = _AzureOpenAISettings()
+    azure_storage: _AzureStorageSettings = _AzureStorageSettings()
     search: _SearchCommonSettings = _SearchCommonSettings()
     ui: Optional[_UiSettings] = _UiSettings()
     

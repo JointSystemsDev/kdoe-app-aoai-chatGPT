@@ -18,6 +18,8 @@ from quart import (
     current_app,
 )
 
+from backend.services.TableEnvironmentService import TableEnvironmentService
+
 from openai import AsyncAzureOpenAI
 from azure.identity.aio import (
     DefaultAzureCredential,
@@ -38,36 +40,28 @@ from backend.utils import (
     format_pf_non_streaming_response,
 )
 
+# Initialize the environment service
+async def init_environment_service():
+    env_service = None
+    try:
+        if app_settings.azure_storage.connection_string:
+            logging.debug("Initializing TableEnvironmentService")
+            env_service = TableEnvironmentService()
+            logging.debug("Initializing table")
+            await env_service.init_table()
+            logging.debug("Table initialization complete")
+        else:
+            logging.warning("Azure Storage not configured for environments. Check your .env file and AZURE_STORAGE_CONNECTION_STRING setting.")
+    except Exception as e:
+        logging.exception("Failed to initialize environment service")
+        raise e
+    return env_service
+
 class Environment:
     def __init__(self, id: str, name: str, settings: dict):
         self.id = id
         self.name = name
         self.settings = settings
-
-# Dummy environments data - in production this would come from Cosmos DB
-ENVIRONMENTS: Dict[str, Environment] = {
-    "default": Environment(
-        "default",
-        "Default Environment",
-        {
-            "title": "Contoso Default",
-            "chat_title": "Default Environment",
-            "chat_description": "This is the default environment",
-            "logo": None,
-            "chat_logo": None,
-            "show_share_button": True,
-            "show_chat_history_button": True,
-            "enable_image_chat": True,
-            "language": "en",
-            "additional_header_logo": None,
-            "help_link_title": "Default Help",
-            "help_link_url": "https://staging-help.contoso.com",
-            "limit_input_to_characters": 7500,
-            "enable_mode_selector": True
-        }
-    )
-}
-
 bp = Blueprint("routes", __name__, static_folder="static", template_folder="static")
 
 cosmos_db_ready = asyncio.Event()
@@ -82,10 +76,12 @@ def create_app():
     async def init():
         try:
             app.cosmos_conversation_client = await init_cosmosdb_client()
+            app.environment_service = await init_environment_service()
             cosmos_db_ready.set()
         except Exception as e:
             logging.exception("Failed to initialize CosmosDB client")
             app.cosmos_conversation_client = None
+            app.environment_service = None
             raise e
     
     return app
@@ -113,21 +109,45 @@ async def assets(path):
 @bp.route("/api/environments", methods=["GET"])
 async def get_environments():
     """Get list of available environments"""
-    environments = [{"id": env.id, "name": env.name} for env in ENVIRONMENTS.values()]
-    return jsonify(environments)
+    try:
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        environments = await current_app.environment_service.get_environments(user_id)
+        
+        # Format the response
+        formatted_environments = [{
+            "id": env["id"],
+            "name": env["name"]
+        } for env in environments]
+        
+        return jsonify(formatted_environments)
+    except Exception as e:
+        logging.exception("Error fetching environments")
+        return jsonify({"error": str(e)}), 500
 
 
 @bp.route("/frontend_settings", methods=["GET"])
 async def get_frontend_settings():
     """Get frontend settings, optionally for a specific environment"""
-    env_id = request.args.get("env", "default")
     try:
+        env_id = request.args.get("env")
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
         # Get base settings
         settings = frontend_settings
 
-        # If environment is specified, override with environment-specific settings
-        if env_id and env_id in ENVIRONMENTS:
-            settings["ui"] = ENVIRONMENTS[env_id].settings
+        # If environment is specified, get environment settings
+        if env_id and current_app.environment_service:
+            environments = await current_app.environment_service.get_environments(user_id)
+            matching_env = next((env for env in environments if env["id"] == env_id), None)
+            
+            if matching_env and "settings" in matching_env:
+                settings["ui"] = matching_env["settings"]
         
         return jsonify(settings), 200
     except Exception as e:
