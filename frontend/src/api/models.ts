@@ -85,12 +85,14 @@ export type ExecResults = {
   code_generated: string | null
 }
 
-export type Conversation = {
-  id: string
-  title: string
-  messages: ChatMessage[]
-  date: string
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  date: string;
+  environmentId?: string;
 }
+
 
 export enum ChatCompletionType {
   ChatCompletion = 'chat.completion',
@@ -116,7 +118,8 @@ export type ChatResponse = {
 }
 
 export type ConversationRequest = {
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  environment_id?: string;  // Made explicit that this is optional
 }
 
 export type UserInfo = {

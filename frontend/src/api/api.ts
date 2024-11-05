@@ -39,45 +39,55 @@ export const fetchChatHistoryInit = (): Conversation[] | null => {
   return chatHistorySampleData
 }
 
-export const historyList = async (offset = 0): Promise<Conversation[] | null> => {
-  const response = await fetch(`/history/list?offset=${offset}`, {
+export const historyList = async (
+  offset = 0, 
+  environmentId?: string  // Using undefined for optional parameter
+): Promise<Conversation[] | null> => {
+  const url = new URL('/history/list', window.location.origin);
+  url.searchParams.append('offset', offset.toString());
+  if (environmentId !== undefined && environmentId !== 'default') {  // Explicit check for undefined and default (which should load all conversations prior to environments)
+      url.searchParams.append('env', environmentId);
+  }
+
+  const response = await fetch(url.toString(), {
     method: 'GET'
   })
     .then(async res => {
-      const payload = await res.json()
+      const payload = await res.json();
       if (!Array.isArray(payload)) {
-        console.error('There was an issue fetching your data.')
-        return null
+        console.error('There was an issue fetching your data.');
+        return null;
       }
       const conversations: Conversation[] = await Promise.all(
         payload.map(async (conv: any) => {
-          let convMessages: ChatMessage[] = []
+          let convMessages: ChatMessage[] = [];
           convMessages = await historyRead(conv.id)
             .then(res => {
-              return res
+              return res;
             })
             .catch(err => {
-              console.error('error fetching messages: ', err)
-              return []
-            })
+              console.error('error fetching messages: ', err);
+              return [];
+            });
           const conversation: Conversation = {
             id: conv.id,
             title: conv.title,
             date: conv.createdAt,
-            messages: convMessages
-          }
-          return conversation
+            messages: convMessages,
+            environmentId: conv.environmentId
+          };
+          return conversation;
         })
-      )
-      return conversations
+      );
+      return conversations;
     })
     .catch(_err => {
-      console.error('There was an issue fetching your data.')
-      return null
-    })
+      console.error('There was an issue fetching your data.');
+      return null;
+    });
 
-  return response
-}
+  return response;
+};
 
 export const historyRead = async (convId: string): Promise<ChatMessage[]> => {
   const response = await fetch('/history/read', {
@@ -119,36 +129,26 @@ export const historyRead = async (convId: string): Promise<ChatMessage[]> => {
 export const historyGenerate = async (
   options: ConversationRequest,
   abortSignal: AbortSignal,
-  convId?: string
+  convId?: string,
+  environmentId?: string  // Using undefined for optional parameter
 ): Promise<Response> => {
-  let body
-  if (convId) {
-    body = JSON.stringify({
-      conversation_id: convId,
-      messages: options.messages
-    })
-  } else {
-    body = JSON.stringify({
-      messages: options.messages
-    })
-  }
+  const body = {
+      messages: options.messages,
+      environment_id: environmentId,
+      ...(convId && { conversation_id: convId })
+  };
+
   const response = await fetch('/history/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: body,
-    signal: abortSignal
-  })
-    .then(res => {
-      return res
-    })
-    .catch(_err => {
-      console.error('There was an issue fetching your data.')
-      return new Response()
-    })
-  return response
-}
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: abortSignal
+  });
+
+  return response;
+};
 
 export const historyUpdate = async (messages: ChatMessage[], convId: string): Promise<Response> => {
   const response = await fetch('/history/update', {

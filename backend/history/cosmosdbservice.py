@@ -45,16 +45,16 @@ class CosmosConversationClient():
             
         return True, "CosmosDB client initialized successfully"
 
-    async def create_conversation(self, user_id, title = ''):
+    async def create_conversation(self, user_id, title = '', environment_id = None):
         conversation = {
             'id': str(uuid.uuid4()),  
             'type': 'conversation',
             'createdAt': datetime.utcnow().isoformat(),  
             'updatedAt': datetime.utcnow().isoformat(),  
             'userId': user_id,
-            'title': title
+            'title': title,
+            'environmentId': environment_id
         }
-        ## TODO: add some error handling based on the output of the upsert_item call
         resp = await self.container_client.upsert_item(conversation)  
         if resp:
             return resp
@@ -88,16 +88,27 @@ class CosmosConversationClient():
             return response_list
 
 
-    async def get_conversations(self, user_id, limit, sort_order = 'DESC', offset = 0):
+    async def get_conversations(self, user_id, limit, environment_id = None, sort_order = 'DESC', offset = 0):
         parameters = [
             {
                 'name': '@userId',
                 'value': user_id
             }
         ]
-        query = f"SELECT * FROM c where c.userId = @userId and c.type='conversation' order by c.updatedAt {sort_order}"
+        
+        query = f"SELECT * FROM c where c.userId = @userId and c.type='conversation'"
+        
+        if environment_id:
+            parameters.append({
+                'name': '@environmentId',
+                'value': environment_id
+            })
+            query += " and c.environmentId = @environmentId"
+            
+        query += f" order by c.updatedAt {sort_order}"
+        
         if limit is not None:
-            query += f" offset {offset} limit {limit}" 
+            query += f" offset {offset} limit {limit}"
         
         conversations = []
         async for item in self.container_client.query_items(query=query, parameters=parameters):
@@ -121,11 +132,11 @@ class CosmosConversationClient():
         async for item in self.container_client.query_items(query=query, parameters=parameters):
             conversations.append(item)
 
-        ## if no conversations are found, return None
         if len(conversations) == 0:
             return None
         else:
             return conversations[0]
+        
  
     async def create_message(self, uuid, conversation_id, user_id, input_message: dict):
         message = {

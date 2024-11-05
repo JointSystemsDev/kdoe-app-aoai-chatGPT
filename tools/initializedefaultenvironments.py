@@ -1,50 +1,69 @@
 import asyncio
-from azure.data.tables.aio import TableServiceClient
-import json
-import os
-from datetime import datetime
+from backend.services.TableEnvironmentService import TableEnvironmentService
 
-async def init_default_environments():
-    connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-    table_name = os.getenv('AZURE_STORAGE_TABLE')
+async def create_default_environment():
+    service = TableEnvironmentService()
+    await service.init_table()
     
-    default_environments = [
-        {
-            'PartitionKey': '00000000-0000-0000-0000-000000000000',  # Common environment
-            'RowKey': 'default',
-            'name': 'Default Environment',
-            'settings': json.dumps({
-                'title': 'Contoso Default',
-                'chat_title': 'Start chatting',
-                'chat_description': 'This is the default environment',
-                'logo': None,
-                'chat_logo': None,
-                'show_share_button': True,
-                'show_chat_history_button': True,
-                'enable_image_chat': False,
-                'language': 'en',
-                'additional_header_logo': None,
-                'help_link_title': None,
-                'help_link_url': None,
-                'limit_input_to_characters': 5000,
-                'enable_mode_selector': True
-            })
+    default_environment = {
+        'name': 'Default Environment',
+        'settings': {
+            'title': 'Contoso Default',
+            'chat_title': 'Start chatting',
+            'chat_description': 'This is the default environment',
+            'logo': None,
+            'chat_logo': None,
+            'show_share_button': True,
+            'show_chat_history_button': True,
+            'enable_image_chat': False,
+            'language': 'en',
+            'additional_header_logo': None,
+            'help_link_title': None,
+            'help_link_url': None,
+            'limit_input_to_characters': 5000,
+            'enable_mode_selector': True
         },
-        # Add more default environments here
-    ]
-
-    async with TableServiceClient.from_connection_string(connection_string) as table_service:
-        # Create table if it doesn't exist
-        await table_service.create_table_if_not_exists(table_name)
-        table_client = table_service.get_table_client(table_name)
-        
-        # Add default environments
-        for environment in default_environments:
-            try:
-                await table_client.create_entity(entity=environment)
-                print(f"Created environment: {environment['name']}")
-            except Exception as e:
-                print(f"Error creating environment {environment['name']}: {str(e)}")
+        'backend_settings': {
+            'openai': {
+                'resource': 'your-resource',
+                'model': 'your-model',
+                'key': 'your-key',
+                'deployment_name': 'your-model-name',
+                'temperature': 0.7,
+                'top_p': 0.95,
+                'max_tokens': 1000,
+                'system_message': 'your-system-message',
+                'preview_api_version': 'your-api-version',
+                'embedding_name': 'text-embedding-ada-002',
+                'embedding_endpoint': 'your-endpoint',
+                'embedding_key': 'your-key'
+            },
+            'search': {
+                'top_k': 5,
+                'strictness': 3,
+                'enable_in_domain': True,
+                'datasource_type': 'AzureCognitiveSearch'
+            },
+            'azure_search': {
+                'service': 'jointsystemai-aisearch-free',
+                'index': 'confluence1',
+                'key': 'your-key',
+                'query_type': 'vectorSimpleHybrid',
+                'semantic_search_config': '',
+                'index_is_prechunked': True,
+                'top_k': 5,
+                'enable_in_domain': False,
+                'content_columns': 'chunk',
+                'filename_column': 'id',
+                'title_column': 'title',
+                'vector_columns': 'text_vector'
+            }
+        }
+    }
+    
+    # Create default environment (common to all users)
+    await service.create_environment('00000000-0000-0000-0000-000000000000', default_environment)
+    print("Default environment created successfully")
 
 if __name__ == "__main__":
-    asyncio.run(init_default_environments())
+    asyncio.run(create_default_environment())

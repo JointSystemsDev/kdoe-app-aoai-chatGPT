@@ -61,8 +61,16 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setIsLoading(true);
       setError(null);
       const data = await fetchEnvironments();
+
+      // Move environment with id "default" to the first position if it exists
+      const defaultEnvIndex = data.findIndex(env => env.id === "default");
+      if (defaultEnvIndex !== -1) {
+        const [defaultEnv] = data.splice(defaultEnvIndex, 1);
+        data.unshift(defaultEnv); // Add it to the start of the array
+      }
+
       setEnvironments(data);
-      
+
       // Check URL parameter first
       const envId = getEnvironmentFromUrl();
       if (envId && data.some(env => env.id === envId)) {

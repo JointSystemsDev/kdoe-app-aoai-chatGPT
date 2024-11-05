@@ -343,14 +343,14 @@ const Chat = () => {
     setShowLoadingMessage(true)
     const abortController = new AbortController()
     abortFuncs.current.unshift(abortController)
-  
+
     const userMessage: ChatMessage = {
       id: uuid(),
       role: 'user',
       content: question,
       date: new Date().toISOString()
     }
-  
+
     let request: ConversationRequest
     let conversation
     if (conversationId) {
@@ -373,14 +373,17 @@ const Chat = () => {
       }
       setMessages(request.messages)
     }
-  
+
     let result = {} as ChatResponse
     var errorResponseMessage = 'Please try again. If the problem persists, please contact the site administrator.'
-    
+
     try {
+      const envId = selectedEnvironment || undefined;
+      
       const response = conversationId
-        ? await historyGenerate(request, abortController.signal, conversationId)
-        : await historyGenerate(request, abortController.signal)
+        ? await historyGenerate(request, abortController.signal, conversationId, envId)
+        : await historyGenerate(request, abortController.signal, undefined, envId)
+
       if (!response?.ok) {
         const responseJson = await response.json()
         errorResponseMessage =
@@ -413,6 +416,7 @@ const Chat = () => {
         setMessages([...resultConversation.messages])
         return
       }
+
       if (response?.body) {
         const reader = response.body.getReader()
 

@@ -41,7 +41,7 @@ class _UiSettings(BaseSettings):
         env_ignore_empty=True
     )
 
-    title: str = "Contoso"
+    title: str = ""
     logo: Optional[str] = None
     chat_logo: Optional[str] = None
     chat_title: str = "Start chatting"
@@ -852,12 +852,12 @@ class _AppSettings(BaseModel):
                 
             else:
                 self.datasource = None
-                logging.warning("No datasource configuration found in the environment -- calls will be made to Azure OpenAI without grounding data.")
+                # logging.warning("No datasource configuration found in the environment -- calls will be made to Azure OpenAI without grounding data.")
                 
             return self
 
         except ValidationError as e:
-            logging.warning("No datasource configuration found in the environment -- calls will be made to Azure OpenAI without grounding data.")
+            # logging.warning("No datasource configuration found in the environment -- calls will be made to Azure OpenAI without grounding data.")
             logging.warning(e.errors())
 
 

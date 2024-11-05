@@ -1,3 +1,4 @@
+import uuid
 from azure.data.tables.aio import TableServiceClient
 from datetime import datetime
 import json
@@ -5,6 +6,7 @@ from typing import List, Dict, Optional
 import logging
 from cachetools import TTLCache
 import asyncio
+from backend.services.backendsettings import BackendSettings
 from backend.settings import app_settings
 
 class TableEnvironmentService:
@@ -29,31 +31,30 @@ class TableEnvironmentService:
             raise
 
     async def get_environments(self, user_id: str) -> List[Dict]:
-        """Get environments for a user, including common environments"""
+        """Get environments for a user, with both frontend and backend settings"""
         # Try cache first
         cached_environments = await self._get_from_cache(user_id)
         if cached_environments is not None:
-            logging.debug(f"Cache hit for user {user_id}")
             return cached_environments
 
         try:
             async with TableServiceClient.from_connection_string(self.connection_string) as table_service:
                 table_client = table_service.get_table_client(self.table_name)
                 
-                # Query for both common environments and user-specific environments
                 environments = []
                 common_filter = "PartitionKey eq '00000000-0000-0000-0000-000000000000'"
                 user_filter = f"PartitionKey eq '{user_id}'"
                 combined_filter = f"({common_filter}) or ({user_filter})"
                 
                 async for entity in table_client.query_entities(combined_filter):
-                    # Convert from table entity to dictionary
                     environment = {
                         'id': entity['RowKey'],
                         'userId': entity['PartitionKey'],
                         'name': entity['name'],
-                        'settings': json.loads(entity['settings'])
+                        'settings': json.loads(entity['settings']),
+                        'backend_settings': json.loads(entity.get('backend_settings', '{}'))
                     }
+                    print(environment)
                     environments.append(environment)
 
                 # Store in cache
@@ -83,30 +84,36 @@ class TableEnvironmentService:
             self.cache.pop(cache_key, None)
 
     async def create_environment(self, user_id: str, environment_data: Dict) -> Dict:
-        """Create a new environment"""
+        """Create a new environment with both frontend and backend settings"""
         try:
             async with TableServiceClient.from_connection_string(self.connection_string) as table_service:
                 table_client = table_service.get_table_client(self.table_name)
                 
+                # Validate backend settings if provided
+                if 'backend_settings' in environment_data:
+                    backend_settings = BackendSettings(**environment_data['backend_settings'])
+                    backend_settings_json = backend_settings.model_dump_json()
+                else:
+                    backend_settings_json = "{}"
+
                 # Prepare entity
                 entity = {
                     'PartitionKey': user_id,
                     'RowKey': environment_data.get('id', str(uuid.uuid4())),
                     'name': environment_data['name'],
-                    'settings': json.dumps(environment_data['settings'])
+                    'settings': json.dumps(environment_data['settings']),  # Frontend settings
+                    'backend_settings': backend_settings_json  # Backend settings
                 }
                 
                 await table_client.create_entity(entity=entity)
-                
-                # Clear cache to force refresh
                 await self._clear_cache(user_id)
                 
-                # Return created environment
                 return {
                     'id': entity['RowKey'],
                     'userId': entity['PartitionKey'],
                     'name': entity['name'],
-                    'settings': environment_data['settings']
+                    'settings': environment_data['settings'],
+                    'backend_settings': json.loads(backend_settings_json)
                 }
 
         except Exception as e:

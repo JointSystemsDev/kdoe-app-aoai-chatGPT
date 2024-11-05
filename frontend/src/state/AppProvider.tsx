@@ -83,13 +83,16 @@ type AppStateProviderProps = {
 }
 
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
-  const [state, dispatch] = useReducer(appStateReducer, initialState)
+  const [state, dispatch] = useReducer(appStateReducer, initialState);
   const { selectedEnvironment } = useEnvironment();
 
   useEffect(() => {
     // Check for cosmosdb config and fetch initial data here
     const fetchChatHistory = async (offset = 0): Promise<Conversation[] | null> => {
-      const result = await historyList(offset)
+      // Convert null to undefined for the API call
+      const envId = selectedEnvironment || undefined;
+      
+      const result = await historyList(offset, envId)
         .then(response => {
           if (response) {
             dispatch({ type: 'FETCH_CHAT_HISTORY', payload: response })
@@ -143,7 +146,7 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
         })
     }
     getHistoryEnsure()
-  }, [])
+  }, [selectedEnvironment])
 
   // Effect for handling environment changes
   useEffect(() => {

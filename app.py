@@ -198,65 +198,52 @@ MS_DEFENDER_ENABLED = os.environ.get("MS_DEFENDER_ENABLED", "true").lower() == "
 
 
 # Initialize Azure OpenAI Client
-async def init_openai_client():
-    azure_openai_client = None
+async def init_openai_client(environment_settings):
     
     try:
-        # API version check
-        if (
-            app_settings.azure_openai.preview_api_version
-            < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION
-        ):
-            raise ValueError(
-                f"The minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
-            )
-
-        # Endpoint
-        if (
-            not app_settings.azure_openai.endpoint and
-            not app_settings.azure_openai.resource
-        ):
-            raise ValueError(
-                "AZURE_OPENAI_ENDPOINT or AZURE_OPENAI_RESOURCE is required"
-            )
-
-        endpoint = (
-            app_settings.azure_openai.endpoint
-            if app_settings.azure_openai.endpoint
-            else f"https://{app_settings.azure_openai.resource}.openai.azure.com/"
-        )
-
-        # Authentication
-        aoai_api_key = app_settings.azure_openai.key
-        ad_token_provider = None
-        if not aoai_api_key:
-            logging.debug("No AZURE_OPENAI_KEY found, using Azure Entra ID auth")
-            async with DefaultAzureCredential() as credential:
-                ad_token_provider = get_bearer_token_provider(
-                    credential,
-                    "https://cognitiveservices.azure.com/.default"
+        # Use environment settings if available
+        if environment_settings and 'backend_settings' in environment_settings:
+            openai_settings = environment_settings['backend_settings']['openai']
+            # print(">>>> OPENAI SETTINGS")
+            # print(openai_settings)
+            # print("<<<< OPENAI SETTINGS")
+            # API version check
+            if (openai_settings['preview_api_version'] < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION):
+                raise ValueError(
+                    f"The minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
                 )
 
-        # Deployment
-        deployment = app_settings.azure_openai.model
-        if not deployment:
-            raise ValueError("AZURE_OPENAI_MODEL is required")
+            # Endpoint construction
+            endpoint = f"https://{openai_settings['resource']}.openai.azure.com/"
 
-        # Default Headers
-        default_headers = {"x-ms-useragent": USER_AGENT}
+            # Authentication
+            aoai_api_key = openai_settings['key']
+            ad_token_provider = None
+            if not aoai_api_key:
+                logging.debug("No AZURE_OPENAI_KEY in environment settings, using Azure Entra ID auth")
+                async with DefaultAzureCredential() as credential:
+                    ad_token_provider = get_bearer_token_provider(
+                        credential,
+                        "https://cognitiveservices.azure.com/.default"
+                    )
 
-        azure_openai_client = AsyncAzureOpenAI(
-            api_version=app_settings.azure_openai.preview_api_version,
-            api_key=aoai_api_key,
-            azure_ad_token_provider=ad_token_provider,
-            default_headers=default_headers,
-            azure_endpoint=endpoint,
-        )
+            # Default Headers
+            default_headers = {"x-ms-useragent": USER_AGENT}
 
-        return azure_openai_client
+            return AsyncAzureOpenAI(
+                api_version=openai_settings['preview_api_version'],
+                api_key=aoai_api_key,
+                azure_ad_token_provider=ad_token_provider,
+                default_headers=default_headers,
+                azure_endpoint=endpoint,
+            )
+            
+        # Fallback to default settings from app_settings
+        else:
+            raise ValueError(f"No environment set")
+           
     except Exception as e:
         logging.exception("Exception in Azure OpenAI initialization", e)
-        azure_openai_client = None
         raise e
 
 
@@ -292,14 +279,18 @@ async def init_cosmosdb_client():
     return cosmos_conversation_client
 
 
-def prepare_model_args(request_body, request_headers):
+async def prepare_model_args(request_body, request_headers, environment_settings):
     request_messages = request_body.get("messages", [])
     messages = []
+    
+    if not environment_settings:
+        raise ValueError(f"No environment set")
+    
     if not app_settings.datasource:
         messages = [
             {
                 "role": "system",
-                "content": app_settings.azure_openai.system_message
+                "content": environment_settings['backend_settings']['openai']['system_message']
             }
         ]
 
@@ -332,71 +323,84 @@ def prepare_model_args(request_body, request_headers):
                     "content": content
                 })
 
-    user_json = None
     if (MS_DEFENDER_ENABLED):
         authenticated_user_details = get_authenticated_user_details(request_headers)
         conversation_id = request_body.get("conversation_id", None)
         application_name = app_settings.ui.title
         user_json = get_msdefender_user_json(authenticated_user_details, request_headers, conversation_id, application_name)
-
+    
+    # Use environment-specific settings if available
+    openai_settings = environment_settings['backend_settings']['openai']
     model_args = {
         "messages": messages,
-        "temperature": app_settings.azure_openai.temperature,
-        "max_tokens": app_settings.azure_openai.max_tokens,
-        "top_p": app_settings.azure_openai.top_p,
+        "temperature": openai_settings['temperature'],
+        "max_tokens": openai_settings['max_tokens'],
+        "top_p": openai_settings['top_p'],
         "stop": app_settings.azure_openai.stop_sequence,
         "stream": app_settings.azure_openai.stream,
-        "model": app_settings.azure_openai.model,
-        "user": user_json
-    }
+        "model": openai_settings['model'],
+        "user": user_json if MS_DEFENDER_ENABLED else None
+        }
 
-    if app_settings.datasource:
+    #if app_settings.datasource:
+    azure_search_settings = environment_settings['backend_settings']['azure_search']
+    if azure_search_settings['service']:
         model_args["extra_body"] = {
             "data_sources": [
-                app_settings.datasource.construct_payload_configuration(
-                    request=request
-                )
+                construct_datasource_payload(request, environment_settings)
             ]
         }
 
-    model_args_clean = copy.deepcopy(model_args)
-    if model_args_clean.get("extra_body"):
-        secret_params = [
-            "key",
-            "connection_string",
-            "embedding_key",
-            "encoded_api_key",
-            "api_key",
-        ]
-        for secret_param in secret_params:
-            if model_args_clean["extra_body"]["data_sources"][0]["parameters"].get(
-                secret_param
-            ):
-                model_args_clean["extra_body"]["data_sources"][0]["parameters"][
-                    secret_param
-                ] = "*****"
-        authentication = model_args_clean["extra_body"]["data_sources"][0][
-            "parameters"
-        ].get("authentication", {})
-        for field in authentication:
-            if field in secret_params:
-                model_args_clean["extra_body"]["data_sources"][0]["parameters"][
-                    "authentication"
-                ][field] = "*****"
-        embeddingDependency = model_args_clean["extra_body"]["data_sources"][0][
-            "parameters"
-        ].get("embedding_dependency", {})
-        if "authentication" in embeddingDependency:
-            for field in embeddingDependency["authentication"]:
-                if field in secret_params:
-                    model_args_clean["extra_body"]["data_sources"][0]["parameters"][
-                        "embedding_dependency"
-                    ]["authentication"][field] = "*****"
-
-    logging.debug(f"REQUEST BODY: {json.dumps(model_args_clean, indent=4)}")
-
     return model_args
 
+# Helper function to construct datasource payload based on environment settings
+def construct_datasource_payload(request, environment_settings):
+    search_settings = environment_settings['backend_settings']['azure_search']
+    openai_settings = environment_settings['backend_settings']['openai']
+    
+    # Prepare the embedding dependency if embedding settings are provided
+    embedding_dependency = None
+    if openai_settings.get('embedding_endpoint') and openai_settings.get('embedding_key'):
+        embedding_dependency = {
+            "type": "endpoint",
+            "endpoint": openai_settings['embedding_endpoint'],
+            "authentication": {
+                "type": "api_key",
+                "key": openai_settings['embedding_key']
+            }
+        }
+    elif openai_settings.get('embedding_name'):
+        embedding_dependency = {
+            "type": "deployment_name",
+            "deployment_name": openai_settings['embedding_name']
+        }
+
+    payload = {
+        "type": "azure_search",
+        "parameters": {
+            "endpoint": f"https://{search_settings['service']}.search.windows.net",
+            "authentication": {
+                "type": "api_key",
+                "key": search_settings['key']
+            },
+            "index_name": search_settings['index'],
+            "fields_mapping": {
+                "content_fields": [search_settings['content_columns']],
+                "title_field": search_settings['title_column'],
+                "url_field": search_settings.get('url_column'),
+                "filepath_field": search_settings['filename_column'],
+                "vector_fields": [search_settings['vector_columns']]
+            },
+            "in_scope": search_settings['enable_in_domain'],
+            "top_n_documents": search_settings['top_k'],
+            "strictness": search_settings['strictness'],
+            "query_type": search_settings['query_type'],
+            "semantic_configuration": search_settings['semantic_search_config'],
+            "embedding_dependency": embedding_dependency
+        }
+    }
+    print(payload)
+    return payload
 
 async def promptflow_request(request):
     try:
@@ -439,10 +443,24 @@ async def send_chat_request(request_body, request_headers):
             filtered_messages.append(message)
             
     request_body['messages'] = filtered_messages
-    model_args = prepare_model_args(request_body, request_headers)
+
+    # Get environment settings
+    environment_id = request_body.get("environment_id")
+    environment_settings = None
+    
+    if environment_id and current_app.environment_service:
+        # Get authenticated user
+        authenticated_user = get_authenticated_user_details(request_headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        # Get environments for user
+        environments = await current_app.environment_service.get_environments(user_id)
+        environment_settings = next((env for env in environments if env["id"] == environment_id), None)
+
+    model_args = await prepare_model_args(request_body, request_headers, environment_settings)
 
     try:
-        azure_openai_client = await init_openai_client()
+        azure_openai_client = await init_openai_client(environment_settings)
         raw_response = await azure_openai_client.chat.completions.with_raw_response.create(**model_args)
         response = raw_response.parse()
         apim_request_id = raw_response.headers.get("apim-request-id") 
@@ -504,15 +522,53 @@ async def conversation_internal(request_body, request_headers):
 async def conversation():
     if not request.is_json:
         return jsonify({"error": "request must be json"}), 415
+    
     request_json = await request.get_json()
+    
+    # Get environment ID from request
+    environment_id = request_json.get("environment_id")
+    environment_settings = None
+    
+    if environment_id and current_app.environment_service:
+        # Get authenticated user
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        # Get environments for user
+        environments = await current_app.environment_service.get_environments(user_id)
+        environment_settings = next((env for env in environments if env["id"] == environment_id), None)
 
     try:
-        return await conversation_internal(request_json, request.headers)
+        model_args = await prepare_model_args(request_json, request.headers, environment_settings)
+        # Initialize Azure OpenAI client with environment-specific settings
+        if environment_settings and 'backend_settings' in environment_settings:
+            openai_settings = environment_settings['backend_settings']['openai']
+            azure_openai_client = AsyncAzureOpenAI(
+                api_version=openai_settings['preview_api_version'],
+                azure_endpoint=f"https://{openai_settings['resource']}.openai.azure.com/",
+                api_key=openai_settings['key'],
+                default_headers={"x-ms-useragent": USER_AGENT}
+            )
+        else:
+            azure_openai_client = await init_openai_client(environment_settings)
+
+        response = await azure_openai_client.chat.completions.create(**model_args)
+        
+        if app_settings.azure_openai.stream and not app_settings.base_settings.use_promptflow:
+            result = await stream_chat_request(model_args, request.headers)
+            response = await make_response(format_as_ndjson(result))
+            response.timeout = None
+            response.mimetype = "application/json-lines"
+            return response
+        else:
+            result = await complete_chat_request(model_args, request.headers)
+            return jsonify(result)
+
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-    except Exception as ex:
-        logging.exception(ex)
-        return jsonify({"error": str(ex)}), 500
+    except Exception as e:
+        logging.exception(e)
+        return jsonify({"error": str(e)}), 500
 
 
 ## Conversation History API ##
@@ -522,21 +578,31 @@ async def add_conversation():
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
 
-    ## check request for conversation_id
     request_json = await request.get_json()
     conversation_id = request_json.get("conversation_id", None)
+    environment_id = request_json.get("environment_id", None)
+
+    environment_settings = None
+    if environment_id and current_app.environment_service:
+        # Get authenticated user
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        # Get environments for user
+        environments = await current_app.environment_service.get_environments(user_id)
+        environment_settings = next((env for env in environments if env["id"] == environment_id), None)
 
     try:
-        # make sure cosmos is configured
         if not current_app.cosmos_conversation_client:
             raise Exception("CosmosDB is not configured or not working")
 
-        # check for the conversation_id, if the conversation is not set, we will create a new one
         history_metadata = {}
         if not conversation_id:
-            title = await generate_title(request_json["messages"])
+            title = await generate_title(request_json["messages"], environment_settings)
             conversation_dict = await current_app.cosmos_conversation_client.create_conversation(
-                user_id=user_id, title=title
+                user_id=user_id,
+                title=title,
+                environment_id=environment_id
             )
             conversation_id = conversation_dict["id"]
             history_metadata["title"] = title
@@ -715,21 +781,21 @@ async def delete_conversation():
 async def list_conversations():
     await cosmos_db_ready.wait()
     offset = request.args.get("offset", 0)
+    environment_id = request.args.get("env")
     authenticated_user = get_authenticated_user_details(request_headers=request.headers)
     user_id = authenticated_user["user_principal_id"]
 
-    ## make sure cosmos is configured
     if not current_app.cosmos_conversation_client:
         raise Exception("CosmosDB is not configured or not working")
 
-    ## get the conversations from cosmos
     conversations = await current_app.cosmos_conversation_client.get_conversations(
-        user_id, offset=offset, limit=25
+        user_id,
+        offset=offset,
+        limit=25,
+        environment_id=environment_id
     )
     if not isinstance(conversations, list):
         return jsonify({"error": f"No conversations for {user_id} were found"}), 404
-
-    ## return the conversation ids
 
     return jsonify(conversations), 200
 
@@ -952,9 +1018,9 @@ async def ensure_cosmos():
             return jsonify({"error": "CosmosDB is not working"}), 500
 
 
-async def generate_title(conversation_messages) -> str:
+async def generate_title(conversation_messages, environment_settings) -> str:
     ## make sure the messages are sorted by _ts descending
-    title_prompt = "Summarize the conversation so far into a 4-word or less title. Do not use any quotation marks or punctuation. Do not include any other commentary or description."
+    title_prompt = "Summarize the conversation so far into a 4-word or less title. Do not use any quotation marks or punctuation. Do not include any other commentary or description. Use the original language of the conversation."
 
     # Process messages to handle array content types
     processed_messages = []
@@ -984,7 +1050,7 @@ async def generate_title(conversation_messages) -> str:
     processed_messages.append({"role": "user", "content": title_prompt})
 
     try:
-        azure_openai_client = await init_openai_client()
+        azure_openai_client = await init_openai_client(environment_settings)
         response = await azure_openai_client.chat.completions.create(
             model=app_settings.azure_openai.model,
             messages=processed_messages,

@@ -1,0 +1,58 @@
+{
+  "name": "Environment Template",
+  "settings": {
+    "title": null,
+    "chat_title": null,
+    "chat_description": null,
+    "logo": null,
+    "chat_logo": null,
+    "show_share_button": false,
+    "show_chat_history_button": false,
+    "enable_image_chat": false,
+    "language": "en",
+    "additional_header_logo": null,
+    "help_link_title": null,
+    "help_link_url": null,
+    "limit_input_to_characters": 5000,
+    "enable_mode_selector": false
+  },
+  "backend_settings": {
+    "openai": {
+      "resource": null,
+      "model": null,
+      "key": null,
+      "deployment_name": null,
+      "temperature": 0.7,
+      "top_p": 0.95,
+      "max_tokens": 1000,
+      "system_message": null,
+      "preview_api_version": null,
+      "embedding_name": "text-embedding-ada-002",
+      "embedding_endpoint": null,
+      "embedding_key": null
+    },
+    "search": {
+      "top_k": 5,
+      "strictness": 3,
+      "enable_in_domain": false,
+      "datasource_type": "AzureCognitiveSearch"
+    },
+    "azure_search": {
+      "service": null,
+      "index": null,
+      "key": null,
+      "query_type": "vectorSimpleHybrid",
+      "semantic_search_config": null,
+      "index_is_prechunked": false,
+      "top_k": 5,
+      "enable_in_domain": false,
+      "content_columns": null,
+      "filename_column": null,
+      "title_column": null,
+      "url_column": null,
+      "vector_columns": null,
+      "permitted_groups_column": null,
+      "strictness": 3
+    }
+  }
+}
