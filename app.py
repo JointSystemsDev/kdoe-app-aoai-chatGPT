@@ -351,6 +351,7 @@ async def prepare_model_args(request_body, request_headers, environment_settings
             ]
         }
 
+    print(model_args)
     return model_args
 
 # Helper function to construct datasource payload based on environment settings
@@ -358,32 +359,22 @@ def construct_datasource_payload(request, environment_settings):
     search_settings = environment_settings['backend_settings']['azure_search']
     openai_settings = environment_settings['backend_settings']['openai']
     
-    # Prepare the embedding dependency if embedding settings are provided
-    embedding_dependency = None
-    if openai_settings.get('embedding_endpoint') and openai_settings.get('embedding_key'):
-        embedding_dependency = {
-            "type": "endpoint",
-            "endpoint": openai_settings['embedding_endpoint'],
-            "authentication": {
-                "type": "api_key",
-                "key": openai_settings['embedding_key']
-            }
-        }
-    elif openai_settings.get('embedding_name'):
-        embedding_dependency = {
-            "type": "deployment_name",
-            "deployment_name": openai_settings['embedding_name']
-        }
+    # Prepare the embedding dependency - simpler structure now
+    embedding_dependency = {
+        "type": "deployment_name",
+        "deployment_name": openai_settings.get('embedding_name', "text-embedding-ada-002")
+    }
 
-    payload = {
+    return {
         "type": "azure_search",
         "parameters": {
-            "endpoint": f"https://{search_settings['service']}.search.windows.net",
+            "allow_partial_result": False,
             "authentication": {
                 "type": "api_key",
                 "key": search_settings['key']
             },
-            "index_name": search_settings['index'],
+            "embedding_dependency": embedding_dependency,
+            "endpoint": f"https://{search_settings['service']}.search.windows.net",
             "fields_mapping": {
                 "content_fields": [search_settings['content_columns']],
                 "title_field": search_settings['title_column'],
@@ -392,15 +383,18 @@ def construct_datasource_payload(request, environment_settings):
                 "vector_fields": [search_settings['vector_columns']]
             },
             "in_scope": search_settings['enable_in_domain'],
-            "top_n_documents": search_settings['top_k'],
-            "strictness": search_settings['strictness'],
-            "query_type": search_settings['query_type'],
+            "include_contexts": [
+                "citations",
+                "intent"
+            ],
+            "index_name": search_settings['index'],
+            "query_type": search_settings['query_type'].lower(),
+            "role_information": openai_settings['system_message'],
             "semantic_configuration": search_settings['semantic_search_config'],
-            "embedding_dependency": embedding_dependency
+            "strictness": search_settings['strictness'],
+            "top_n_documents": search_settings['top_k']
         }
     }
-    print(payload)
-    return payload
 
 async def promptflow_request(request):
     try:
