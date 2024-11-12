@@ -45,6 +45,18 @@ const Layout = () => {
     appStateContext?.dispatch({ type: 'TOGGLE_CHAT_HISTORY' })
   }
 
+  const getPageTitle = () => {
+    if (location.pathname === '/configuration') {
+      return 'Configuration Management'
+    }
+    return ui?.title || 'Chatbot'
+  }
+
+  useEffect(() => {
+    const title = getPageTitle();
+    document.title = title;
+  }, [location.pathname, ui?.title, selectedEnvironment]);
+
   // Function to process logo URL
   const processLogoUrl = (logoPath: string | null | undefined) => {
     if (!logoPath) return Contoso;
