@@ -109,10 +109,13 @@ class _AzureOpenAISettings(BaseSettings):
         extra='ignore',
         env_ignore_empty=True
     )
-    
-    model: str
-    key: Optional[str] = None
+    apim_endpoint: Optional[str] = None
+    apim_key: Optional[str] = None
+    apim_organization: Optional[str] = None
+    apim_appname: Optional[str] = None
     resource: Optional[str] = None
+    key: Optional[str] = None
+    model: str
     endpoint: Optional[str] = None
     temperature: float = 0
     top_p: float = 0

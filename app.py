@@ -5,7 +5,7 @@ import logging
 import uuid
 import httpx
 import asyncio
-from typing import List, Optional
+from typing import List, Optional, Any, Tuple
 from typing import Dict, Union
 from quart import (
     Blueprint,
@@ -196,55 +196,95 @@ frontend_settings = {
 # Enable Microsoft Defender for Cloud Integration
 MS_DEFENDER_ENABLED = os.environ.get("MS_DEFENDER_ENABLED", "true").lower() == "true"
 
+def build_openai_request_params():
+    """
+    Builds the extra headers and query parameters for OpenAI API requests based on environment settings.
+    
+    Args:
+        environment_settings (Dict): Environment configuration dictionary containing OpenAI settings
+        
+    Returns:
+        Tuple[Dict[str, str], Dict[str, str]]: A tuple of (extra_headers, extra_query)
+    """   
+    # Initialize default headers
+    extra_headers = {
+        "x-ms-useragent": USER_AGENT,
+        "Content-Type": "application/json"
+    }
+    
+    # Initialize default query parameters
+    default_query = {}
+    
+    # Add APIM subscription key if available
+    if app_settings.azure_openai.apim_key:
+        extra_headers.update({
+            "api-key":app_settings.azure_openai.apim_key,
+            "Ocp-Apim-Subscription-Key":app_settings.azure_openai.apim_key
+        })
+    
+    # Add organization and app name to query parameters if both are available
+    if app_settings.azure_openai.apim_organization and app_settings.azure_openai.apim_appname:
+        default_query.update({
+            "organizationName": app_settings.azure_openai.apim_organization,
+            "appName": app_settings.azure_openai.apim_appname
+        })
+    
+    return extra_headers, default_query
 
 # Initialize Azure OpenAI Client
-async def init_openai_client(environment_settings):
-    
+async def init_openai_client(environment_settings: Optional[Dict[str, Any]] = None):
     try:
-        # Use environment settings if available
-        if environment_settings and 'backend_settings' in environment_settings:
-            openai_settings = environment_settings['backend_settings']['openai']
-            # print(">>>> OPENAI SETTINGS")
-            # print(openai_settings)
-            # print("<<<< OPENAI SETTINGS")
-            # API version check
-            if (openai_settings['preview_api_version'] < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION):
-                raise ValueError(
-                    f"The minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
-                )
+        if not environment_settings or 'backend_settings' not in environment_settings:
+            raise ValueError("Environment settings are required")
 
-            # Endpoint construction
-            endpoint = f"https://{openai_settings['resource']}.openai.azure.com/"
-
-            # Authentication
-            aoai_api_key = openai_settings['key']
-            ad_token_provider = None
-            if not aoai_api_key:
-                logging.debug("No AZURE_OPENAI_KEY in environment settings, using Azure Entra ID auth")
-                async with DefaultAzureCredential() as credential:
-                    ad_token_provider = get_bearer_token_provider(
-                        credential,
-                        "https://cognitiveservices.azure.com/.default"
-                    )
-
-            # Default Headers
-            default_headers = {"x-ms-useragent": USER_AGENT}
-
-            return AsyncAzureOpenAI(
-                api_version=openai_settings['preview_api_version'],
-                api_key=aoai_api_key,
-                azure_ad_token_provider=ad_token_provider,
-                default_headers=default_headers,
-                azure_endpoint=endpoint,
+        openai_settings = environment_settings['backend_settings']['openai']
+        
+        # Validate API version
+        if openai_settings['preview_api_version'] < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION:
+            raise ValueError(
+                f"Minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
             )
-            
-        # Fallback to default settings from app_settings
+
+        # Base headers
+        default_headers = {
+            "x-ms-useragent": USER_AGENT,
+            "Content-Type": "application/json"
+        }
+        
+        # Configure endpoint and headers for APIM or direct OpenAI access
+        if app_settings.azure_openai.apim_endpoint:
+            # Use APIM-specific endpoint and headers
+            endpoint = app_settings.azure_openai.apim_endpoint
         else:
-            raise ValueError(f"No environment set")
-           
+            # Fallback to the direct Azure OpenAI endpoint if APIM is not configured
+            endpoint = f"https://{app_settings.azure_openai.resource}.openai.azure.com/"
+            default_headers["api-key"] = app_settings.azure_openai.key  # Include API key if direct access
+
+        # Set up authentication
+        aoai_api_key = app_settings.azure_openai.key
+        ad_token_provider = None
+
+        # Configure Azure AD authentication if API key is not used
+        if not aoai_api_key:
+            logging.info("Using Azure Entra ID authentication")
+            credential = DefaultAzureCredential()
+            ad_token_provider = get_bearer_token_provider(
+                credential,
+                "https://cognitiveservices.azure.com/.default"
+            )
+
+        # Return configured AsyncAzureOpenAI client
+        return AsyncAzureOpenAI(
+            api_version=openai_settings['preview_api_version'],
+            api_key=aoai_api_key,
+            azure_ad_token_provider=ad_token_provider,
+            default_headers=default_headers,
+            azure_endpoint=endpoint
+        )
+
     except Exception as e:
-        logging.exception("Exception in Azure OpenAI initialization", e)
-        raise e
+        logging.exception("Failed to initialize Azure OpenAI client")
+        raise
 
 
 async def init_cosmosdb_client():
@@ -278,9 +318,10 @@ async def init_cosmosdb_client():
 
     return cosmos_conversation_client
 
-
 async def prepare_model_args(request_body, request_headers, environment_settings):
     request_messages = request_body.get("messages", [])
+    extra_headers, extra_query = build_openai_request_params()
+
     messages = []
     
     if not environment_settings:
@@ -339,7 +380,9 @@ async def prepare_model_args(request_body, request_headers, environment_settings
         "stop": app_settings.azure_openai.stop_sequence,
         "stream": app_settings.azure_openai.stream,
         "model": openai_settings['model'],
-        "user": user_json if MS_DEFENDER_ENABLED else None
+        "user": user_json if MS_DEFENDER_ENABLED else None,
+        "extra_headers": extra_headers,
+        "extra_query": extra_query
         }
 
     #if app_settings.datasource:
@@ -351,7 +394,6 @@ async def prepare_model_args(request_body, request_headers, environment_settings
             ]
         }
 
-    print(model_args)
     return model_args
 
 # Helper function to construct datasource payload based on environment settings
@@ -429,6 +471,7 @@ async def promptflow_request(request):
         logging.error(f"An error occurred while making promptflow_request: {e}")
 
 
+
 async def send_chat_request(request_body, request_headers):
     filtered_messages = []
     messages = request_body.get("messages", [])
@@ -455,6 +498,8 @@ async def send_chat_request(request_body, request_headers):
 
     try:
         azure_openai_client = await init_openai_client(environment_settings)
+        
+        
         raw_response = await azure_openai_client.chat.completions.with_raw_response.create(**model_args)
         response = raw_response.parse()
         apim_request_id = raw_response.headers.get("apim-request-id") 
@@ -1045,11 +1090,14 @@ async def generate_title(conversation_messages, environment_settings) -> str:
 
     try:
         azure_openai_client = await init_openai_client(environment_settings)
+        extra_headers, extra_query = build_openai_request_params()
         response = await azure_openai_client.chat.completions.create(
             model=app_settings.azure_openai.model,
             messages=processed_messages,
             temperature=1,
-            max_tokens=64
+            max_tokens=64,
+            extra_headers=extra_headers,
+            extra_query=extra_query
         )
 
         title = response.choices[0].message.content
