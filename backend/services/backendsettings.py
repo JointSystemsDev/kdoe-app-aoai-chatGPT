@@ -6,24 +6,17 @@ class OpenAISettings(BaseModel):
         protected_namespaces=()  # Disable protected namespace checking
     )
     resource: str
-    model: str
-    key: str
-    deployment_name: str = Field(..., description="The deployment name of the model")  # Changed from model_name
+    # model: str
+    # key: str
+    # deployment_name: str = Field(..., description="The deployment name of the model")  # Changed from model_name
     temperature: float = 0.7
     top_p: float = 0.95
     max_tokens: int = 1000
     system_message: str
-    preview_api_version: str
+    # preview_api_version: str
     embedding_name: Optional[str] = None
     embedding_endpoint: Optional[str] = None
     embedding_key: Optional[str] = None
-
-    @model_validator(mode="before")
-    def check_fields(cls, values):
-        # Custom logic here, for example:
-        if "model" not in values:
-            raise ValueError("The 'model' field is required.")
-        return values  # Ensure it returns `values` or `self`
 
 class SearchSettings(BaseModel):
     top_k: int = 5

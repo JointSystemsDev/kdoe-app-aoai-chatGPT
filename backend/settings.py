@@ -169,18 +169,7 @@ class _AzureOpenAISettings(BaseSettings):
             return parse_multi_columns(comma_separated_string)
         
         return None
-    
-    @model_validator(mode="after")
-    def ensure_endpoint(self) -> Self:
-        if self.endpoint:
-            return Self
-        
-        elif self.resource:
-            self.endpoint = f"https://{self.resource}.openai.azure.com"
-            return Self
-        
-        raise ValidationError("AZURE_OPENAI_ENDPOINT or AZURE_OPENAI_RESOURCE is required")
-        
+           
     def extract_embedding_dependency(self) -> Optional[dict]:
         if self.embedding_name:
             return {

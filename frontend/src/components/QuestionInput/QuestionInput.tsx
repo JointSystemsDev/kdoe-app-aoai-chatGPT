@@ -8,7 +8,6 @@ import styles from './QuestionInput.module.css'
 import { ChatMessage } from '../../api'
 import { AppStateContext } from '../../state/AppProvider'
 import { resizeImage } from '../../utils/resizeImage'
-import { useAppInsights } from '../../ApplicationInsightsSerive'
 
 import { t } from '../../utils/localization'
 import * as pdfjsLib from 'pdfjs-dist';
@@ -30,7 +29,6 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   const [question, setQuestion] = useState<string>('')
   const [base64Image, setBase64Image] = useState<string | null>(null);
   const [pdfContent, setPdfContent] = useState<string | null>(null);
-  const appInsights = useAppInsights();
   const appStateContext = useContext(AppStateContext)
   // const OYD_ENABLED = appStateContext?.state.frontendSettings?.oyd_enabled || false;
 
@@ -92,9 +90,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
     }
   };
 
-  const sendQuestion = () => {
-    appInsights?.trackEvent({ name: `Event: SendQuestion` });
-  
+  const sendQuestion = () => { 
     if (disabled || !question.trim()) {
       return;
     }

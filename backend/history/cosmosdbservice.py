@@ -103,13 +103,16 @@ class CosmosConversationClient():
                 'name': '@environmentId',
                 'value': environment_id
             })
-            query += " and c.environmentId = @environmentId"
+            if environment_id == 'default':
+                query += " and (c.environmentId = @environmentId OR NOT IS_DEFINED(c.environmentId))"
+            else:
+                query += " and c.environmentId = @environmentId"
             
         query += f" order by c.updatedAt {sort_order}"
         
         if limit is not None:
             query += f" offset {offset} limit {limit}"
-        
+
         conversations = []
         async for item in self.container_client.query_items(query=query, parameters=parameters):
             conversations.append(item)

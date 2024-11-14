@@ -36,4 +36,9 @@ export const de = {
   'AI-generated content may be incorrect': 'AI-generierter Inhalt kann falsch sein.',
   'Generating answer...': 'Erzeuge Antwort',
   'Bild oder PDF hochladen': '',
+  'Switch Environment?': 'Chat Umgebung wechseln',
+  'You have an active chat in': 'Sie haben einen aktiven Chat in',
+  'Switching to': 'Das Wechseln zu',
+  'will start a new chat. Do you want to continue': 'wird einen neuen Chat starten. Wollen Sie weiter machen',
+  'Switch': 'Wechseln'
 };

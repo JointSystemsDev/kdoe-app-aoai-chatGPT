@@ -240,7 +240,7 @@ async def init_openai_client(environment_settings: Optional[Dict[str, Any]] = No
         openai_settings = environment_settings['backend_settings']['openai']
         
         # Validate API version
-        if openai_settings['preview_api_version'] < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION:
+        if app_settings.azure_openai.preview_api_version < MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION:
             raise ValueError(
                 f"Minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
             )
@@ -275,7 +275,7 @@ async def init_openai_client(environment_settings: Optional[Dict[str, Any]] = No
 
         # Return configured AsyncAzureOpenAI client
         return AsyncAzureOpenAI(
-            api_version=openai_settings['preview_api_version'],
+            api_version=app_settings.azure_openai.preview_api_version,
             api_key=aoai_api_key,
             azure_ad_token_provider=ad_token_provider,
             default_headers=default_headers,
@@ -379,7 +379,7 @@ async def prepare_model_args(request_body, request_headers, environment_settings
         "top_p": openai_settings['top_p'],
         "stop": app_settings.azure_openai.stop_sequence,
         "stream": app_settings.azure_openai.stream,
-        "model": openai_settings['model'],
+        "model": app_settings.azure_openai.model,
         "user": user_json if MS_DEFENDER_ENABLED else None,
         "extra_headers": extra_headers,
         "extra_query": extra_query
@@ -583,7 +583,7 @@ async def conversation():
         if environment_settings and 'backend_settings' in environment_settings:
             openai_settings = environment_settings['backend_settings']['openai']
             azure_openai_client = AsyncAzureOpenAI(
-                api_version=openai_settings['preview_api_version'],
+                api_version=app_settings.azure_openai.preview_api_version,
                 azure_endpoint=f"https://{openai_settings['resource']}.openai.azure.com/",
                 api_key=openai_settings['key'],
                 default_headers={"x-ms-useragent": USER_AGENT}

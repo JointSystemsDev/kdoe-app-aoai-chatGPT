@@ -36,6 +36,11 @@ export const en = {
     'AI-generated content may be incorrect': '',
     'Generating answer...': '',
     'Upload Image or PDF': '',
+    'Switch Environment?': '',
+    'You have an active chat in': '',
+    'Switching to': '',
+    'will start a new chat. Do you want to continue': '',
+    'Switch': ''
   };
 
   // {t('Citations')}

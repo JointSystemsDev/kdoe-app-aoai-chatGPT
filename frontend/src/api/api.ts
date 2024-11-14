@@ -45,8 +45,12 @@ export const historyList = async (
 ): Promise<Conversation[] | null> => {
   const url = new URL('/history/list', window.location.origin);
   url.searchParams.append('offset', offset.toString());
-  if (environmentId !== undefined && environmentId !== 'default') {  // Explicit check for undefined and default (which should load all conversations prior to environments)
+  if (environmentId !== undefined) {  // Explicit check for undefined and default (which should load all conversations prior to environments)
       url.searchParams.append('env', environmentId);
+  }
+  else
+  {
+    url.searchParams.append('env', 'default');
   }
 
   const response = await fetch(url.toString(), {

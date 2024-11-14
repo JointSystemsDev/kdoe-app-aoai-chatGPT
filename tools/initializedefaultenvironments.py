@@ -25,10 +25,6 @@ async def create_default_environment():
         },
         'backend_settings': {
             'openai': {
-                'resource': 'your-resource',
-                'model': 'your-model',
-                'key': 'your-key',
-                'deployment_name': 'your-model-name',
                 'temperature': 0.7,
                 'top_p': 0.95,
                 'max_tokens': 1000,

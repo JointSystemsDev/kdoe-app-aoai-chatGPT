@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog, DialogType, DialogFooter, PrimaryButton, DefaultButton } from '@fluentui/react';
+import { t } from '../../utils/localization';
 
 interface EnvironmentSwitchDialogProps {
   isOpen: boolean;
@@ -18,9 +19,9 @@ export const EnvironmentSwitchDialog: React.FC<EnvironmentSwitchDialogProps> = (
 }) => {
   const dialogContentProps = {
     type: DialogType.normal,
-    title: 'Switch Environment?',
+    title: t('Switch Environment?'),
     closeButtonAriaLabel: 'Close',
-    subText: `You have an active chat in "${fromEnvironment}". Switching to "${toEnvironment}" will start a new chat. Do you want to continue?`
+    subText: `${t('You have an active chat in')} "${fromEnvironment}". ${t('Switching to')} "${toEnvironment}" ${t('will start a new chat. Do you want to continue')}?`
   };
 
   const modalProps = {
@@ -36,8 +37,8 @@ export const EnvironmentSwitchDialog: React.FC<EnvironmentSwitchDialogProps> = (
       modalProps={modalProps}
     >
       <DialogFooter>
-        <PrimaryButton onClick={onConfirm} text="Switch" />
-        <DefaultButton onClick={onDismiss} text="Cancel" />
+        <PrimaryButton onClick={onConfirm} text={t('Switch')} />
+        <DefaultButton onClick={onDismiss} text={t('Cancel')} />
       </DialogFooter>
     </Dialog>
   );
