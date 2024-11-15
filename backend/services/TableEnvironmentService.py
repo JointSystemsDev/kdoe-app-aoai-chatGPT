@@ -54,7 +54,6 @@ class TableEnvironmentService:
                         'settings': json.loads(entity['settings']),
                         'backend_settings': json.loads(entity.get('backend_settings', '{}'))
                     }
-                    print(environment)
                     environments.append(environment)
 
                 # Store in cache

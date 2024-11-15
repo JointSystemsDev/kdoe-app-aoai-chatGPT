@@ -225,10 +225,9 @@ def build_openai_request_params(environment_id):
     # Add organization and app name to query parameters if both are available
     if app_settings.azure_openai.apim_organization and app_settings.azure_openai.apim_appname:
         default_query.update({
-            "organizationName": app_settings.azure_openai.apim_organization + "-" + environment_id,
-            "appName": app_settings.azure_openai.apim_appname
+            "appName": app_settings.azure_openai.apim_appname,
+            "organizationName": app_settings.azure_openai.apim_organization + "." + environment_id
         })
-    
     return extra_headers, default_query
 
 # Initialize Azure OpenAI Client
