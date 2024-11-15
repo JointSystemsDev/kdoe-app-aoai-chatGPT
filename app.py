@@ -196,7 +196,7 @@ frontend_settings = {
 # Enable Microsoft Defender for Cloud Integration
 MS_DEFENDER_ENABLED = os.environ.get("MS_DEFENDER_ENABLED", "true").lower() == "true"
 
-def build_openai_request_params():
+def build_openai_request_params(environment_id):
     """
     Builds the extra headers and query parameters for OpenAI API requests based on environment settings.
     
@@ -225,7 +225,7 @@ def build_openai_request_params():
     # Add organization and app name to query parameters if both are available
     if app_settings.azure_openai.apim_organization and app_settings.azure_openai.apim_appname:
         default_query.update({
-            "organizationName": app_settings.azure_openai.apim_organization,
+            "organizationName": app_settings.azure_openai.apim_organization + "-" + environment_id,
             "appName": app_settings.azure_openai.apim_appname
         })
     
@@ -320,7 +320,7 @@ async def init_cosmosdb_client():
 
 async def prepare_model_args(request_body, request_headers, environment_settings):
     request_messages = request_body.get("messages", [])
-    extra_headers, extra_query = build_openai_request_params()
+    extra_headers, extra_query = build_openai_request_params(environment_settings['id'])
 
     messages = []
     
@@ -1090,7 +1090,7 @@ async def generate_title(conversation_messages, environment_settings) -> str:
 
     try:
         azure_openai_client = await init_openai_client(environment_settings)
-        extra_headers, extra_query = build_openai_request_params()
+        extra_headers, extra_query = build_openai_request_params(environment_settings['id'])
         response = await azure_openai_client.chat.completions.create(
             model=app_settings.azure_openai.model,
             messages=processed_messages,
