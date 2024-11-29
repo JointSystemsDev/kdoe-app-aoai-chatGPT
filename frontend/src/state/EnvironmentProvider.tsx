@@ -16,11 +16,14 @@ interface EnvironmentContextType {
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
 
+const INTENDED_ENV_KEY = 'intended_environment';
+
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Helper function to get environment from URL
   const getEnvironmentFromUrl = (): string | null => {
@@ -41,58 +44,87 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     window.location.hash = newHash;
   };
 
-  useEffect(() => {
-    loadEnvironments();
+  // Store intended environment before auth redirect
+  const storeIntendedEnvironment = (envId: string) => {
+    sessionStorage.setItem(INTENDED_ENV_KEY, envId);
+  };
 
-    // Listen for hash changes
+  // Retrieve and clear intended environment
+  const getAndClearIntendedEnvironment = (): string | null => {
+    const envId = sessionStorage.getItem(INTENDED_ENV_KEY);
+    sessionStorage.removeItem(INTENDED_ENV_KEY);
+    return envId;
+  };
+
+  useEffect(() => {
+    const initializeEnvironments = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await fetchEnvironments();
+        setEnvironments(data);
+        
+        if (data.length === 0) {
+          setError('No environments available.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Check for intended environment from previous auth redirect
+        const intendedEnv = getAndClearIntendedEnvironment();
+        if (intendedEnv && data.some(env => env.id === intendedEnv)) {
+          setSelectedEnvironment(intendedEnv);
+          updateUrlWithEnvironment(intendedEnv);
+          setIsInitialized(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Check URL parameter
+        const urlEnv = getEnvironmentFromUrl();
+        if (urlEnv && data.some(env => env.id === urlEnv)) {
+          // Store the intended environment before potential auth redirect
+          storeIntendedEnvironment(urlEnv);
+          setSelectedEnvironment(urlEnv);
+        } else {
+          // Default to first environment if no valid URL parameter
+          setSelectedEnvironment(data[0].id);
+          updateUrlWithEnvironment(data[0].id);
+        }
+
+        setIsInitialized(true);
+      } catch (err) {
+        setError('Failed to load environments. Please try again later.');
+        console.error('Error loading environments:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!isInitialized) {
+      initializeEnvironments();
+    }
+  }, [isInitialized]);
+
+  useEffect(() => {
     const handleHashChange = () => {
       const envId = getEnvironmentFromUrl();
       if (envId && environments.some(env => env.id === envId) && envId !== selectedEnvironment) {
+        storeIntendedEnvironment(envId);
         setSelectedEnvironment(envId);
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const loadEnvironments = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await fetchEnvironments();
-
-      // Move environment with id "default" to the first position if it exists
-      const defaultEnvIndex = data.findIndex(env => env.id === "default");
-      if (defaultEnvIndex !== -1) {
-        const [defaultEnv] = data.splice(defaultEnvIndex, 1);
-        data.unshift(defaultEnv); // Add it to the start of the array
-      }
-
-      setEnvironments(data);
-
-      // Check URL parameter first
-      const envId = getEnvironmentFromUrl();
-      if (envId && data.some(env => env.id === envId)) {
-        setSelectedEnvironment(envId);
-      } else if (data.length > 0 && !selectedEnvironment) {
-        // If no valid URL parameter, set default environment
-        setSelectedEnvironment(data[0].id);
-        // Update URL with default environment
-        updateUrlWithEnvironment(data[0].id);
-      }
-    } catch (err) {
-      setError('Failed to load environments. Please try again later.');
-      console.error('Error loading environments:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [environments, selectedEnvironment]);
 
   const setEnvironment = (environmentId: string) => {
-    setSelectedEnvironment(environmentId);
-    // Update URL when environment changes
-    updateUrlWithEnvironment(environmentId);
+    if (environments.some(env => env.id === environmentId)) {
+      storeIntendedEnvironment(environmentId);
+      setSelectedEnvironment(environmentId);
+      updateUrlWithEnvironment(environmentId);
+    }
   };
 
   return (
