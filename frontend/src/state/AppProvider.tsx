@@ -2,7 +2,7 @@ import React, {
   createContext,
   ReactNode,
   useEffect,
-  useReducer
+  useReducer,
 } from 'react'
 
 import {
@@ -86,85 +86,59 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
   const [state, dispatch] = useReducer(appStateReducer, initialState);
   const { selectedEnvironment } = useEnvironment();
 
-  useEffect(() => {
-    // Check for cosmosdb config and fetch initial data here
-    const fetchChatHistory = async (offset = 0): Promise<Conversation[] | null> => {
-      // Convert null to undefined for the API call
-      const envId = selectedEnvironment || undefined;
-      
-      const result = await historyList(offset, envId)
-        .then(response => {
-          if (response) {
-            dispatch({ type: 'FETCH_CHAT_HISTORY', payload: response })
-          } else {
-            dispatch({ type: 'FETCH_CHAT_HISTORY', payload: null })
-          }
-          return response
-        })
-        .catch(_err => {
-          dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail })
-          dispatch({ type: 'FETCH_CHAT_HISTORY', payload: null })
-          console.error('There was an issue fetching your data.')
-          return null
-        })
-      return result
-    }
+    // Only handle CosmosDB initialization
+    useEffect(() => {
+      const initializeCosmosDB = async () => {
+        try {
+          const response = await historyEnsure();
+          dispatch({ type: 'SET_COSMOSDB_STATUS', payload: response });
+        } catch (_err) {
+          dispatch({ type: 'SET_COSMOSDB_STATUS', payload: { cosmosDB: false, status: CosmosDBStatus.NotConfigured } });
+        }
+      };
+  
+      initializeCosmosDB();
+    }, []); // Only run on mount
 
-    const getHistoryEnsure = async () => {
-      dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Loading })
-      historyEnsure()
-        .then(response => {
-          if (response?.cosmosDB) {
-            fetchChatHistory()
-              .then(res => {
-                if (res) {
-                  dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Success })
-                  dispatch({ type: 'SET_COSMOSDB_STATUS', payload: response })
-                } else {
-                  dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail })
-                  dispatch({
-                    type: 'SET_COSMOSDB_STATUS',
-                    payload: { cosmosDB: false, status: CosmosDBStatus.NotWorking }
-                  })
-                }
-              })
-              .catch(_err => {
-                dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail })
-                dispatch({
-                  type: 'SET_COSMOSDB_STATUS',
-                  payload: { cosmosDB: false, status: CosmosDBStatus.NotWorking }
-                })
-              })
-          } else {
-            dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail })
-            dispatch({ type: 'SET_COSMOSDB_STATUS', payload: response })
-          }
-        })
-        .catch(_err => {
-          dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail })
-          dispatch({ type: 'SET_COSMOSDB_STATUS', payload: { cosmosDB: false, status: CosmosDBStatus.NotConfigured } })
-        })
-    }
-    getHistoryEnsure()
-  }, [selectedEnvironment])
-
-  // Effect for handling environment changes
+  // Handle environment changes and chat history loading
   useEffect(() => {
-    // Clear current chat when environment changes
+    const loadEnvironmentData = async () => {
+      if (!selectedEnvironment) {
+        // If no environment is selected, reset state and don't load any history
+        dispatch({ type: 'RESET_CHAT_STATE' });
+        return;
+      }
+
+      // Set loading state
+      dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Loading });
+
+      try {
+        // Load chat history for the selected environment
+        const response = await historyList(0, selectedEnvironment);
+        if (response) {
+          dispatch({ type: 'FETCH_CHAT_HISTORY', payload: response });
+          dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Success });
+        } else {
+          dispatch({ type: 'FETCH_CHAT_HISTORY', payload: null });
+          dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail });
+        }
+
+        // Load frontend settings
+        const settingsResponse = await frontendSettings(selectedEnvironment);
+        dispatch({ type: 'FETCH_FRONTEND_SETTINGS', payload: settingsResponse as FrontendSettings });
+
+      } catch (err) {
+        console.error('Error loading environment data:', err);
+        dispatch({ type: 'UPDATE_CHAT_HISTORY_LOADING_STATE', payload: ChatHistoryLoadingState.Fail });
+        dispatch({ type: 'FETCH_CHAT_HISTORY', payload: null });
+      }
+    };
+
+    // Reset state before loading new environment data
     dispatch({ type: 'RESET_CHAT_STATE' });
-    
-    // Fetch new frontend settings for the selected environment
-    const getFrontendSettings = async () => {
-      frontendSettings(selectedEnvironment ?? undefined)
-        .then(response => {
-          dispatch({ type: 'FETCH_FRONTEND_SETTINGS', payload: response as FrontendSettings })
-        })
-        .catch(_err => {
-          console.error('There was an issue fetching your data.')
-        })
-    }
-    getFrontendSettings()
-  }, [selectedEnvironment])
+    loadEnvironmentData();
+
+  }, [selectedEnvironment]);
 
   return <AppStateContext.Provider value={{ state, dispatch }}>{children}</AppStateContext.Provider>
-}
+};

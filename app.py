@@ -342,13 +342,20 @@ async def prepare_model_args(request_body, request_headers, environment_settings
                 if len(content) == 2:
                     # Check if it's an image message
                     if isinstance(content[0], dict) and 'type' in content[0]:
-                        # Keep image messages as is
-                        messages.append({
-                            "role": message["role"],
-                            "content": content
-                        })
+                        if content[1].get('type') == 'document':
+                            # For document types, format similarly to legacy PDF content
+                            messages.append({
+                                "role": message["role"],
+                                "content": f"{content[0]['text']}\n\nAdditional Context:\n{content[1]['content']}"
+                            })
+                        else:
+                            # Keep image messages as is
+                            messages.append({
+                                "role": message["role"],
+                                "content": content
+                            })
                     else:
-                        # For PDF content, join with separator
+                        # For legacy PDF content, join with separator
                         messages.append({
                             "role": message["role"],
                             "content": f"{content[0]}\n\nAdditional Context:\n{content[1]}"
@@ -363,6 +370,7 @@ async def prepare_model_args(request_body, request_headers, environment_settings
                     "content": content
                 })
 
+    # Rest of the function remains the same...
     if (MS_DEFENDER_ENABLED):
         authenticated_user_details = get_authenticated_user_details(request_headers)
         conversation_id = request_body.get("conversation_id", None)
@@ -382,9 +390,8 @@ async def prepare_model_args(request_body, request_headers, environment_settings
         "user": user_json if MS_DEFENDER_ENABLED else None,
         "extra_headers": extra_headers,
         "extra_query": extra_query
-        }
+    }
 
-    #if app_settings.datasource:
     azure_search_settings = environment_settings['backend_settings']['azure_search']
     if azure_search_settings['service']:
         model_args["extra_body"] = {

@@ -143,27 +143,40 @@ class CosmosConversationClient():
  
     async def create_message(self, uuid, conversation_id, user_id, input_message: dict):
         message = {
-        'id': uuid,
-        'type': 'message',
-        'userId': user_id,
-        'createdAt': datetime.utcnow().isoformat(),
-        'updatedAt': datetime.utcnow().isoformat(),
-        'conversationId': conversation_id,
-        'role': input_message['role'],
+            'id': uuid,
+            'type': 'message',
+            'userId': user_id,
+            'createdAt': datetime.utcnow().isoformat(),
+            'updatedAt': datetime.utcnow().isoformat(),
+            'conversationId': conversation_id,
+            'role': input_message['role'],
         }
 
         # Handle different content types
         if isinstance(input_message['content'], list):
             if len(input_message['content']) == 2:
-                if isinstance(input_message['content'][0], dict) and 'type' in input_message['content'][0]:
-                    # Image content - store as is
-                    message['content'] = input_message['content']
-                else:
-                    # PDF content - store as structured object
+                # Check if it's the new document format
+                if (isinstance(input_message['content'][0], dict) and 
+                    isinstance(input_message['content'][1], dict) and 
+                    input_message['content'][1].get('type') == 'document'):
                     message['content'] = {
-                        'type': 'pdf',
+                        'type': 'document',
+                        'text': input_message['content'][0]['text'],
+                        'documentType': input_message['content'][1]['documentType'],
+                        'content': input_message['content'][1]['content']
+                    }
+                # Check if it's an image
+                elif (isinstance(input_message['content'][0], dict) and 
+                    'type' in input_message['content'][0] and
+                    input_message['content'][0]['type'] == 'text'):
+                    message['content'] = input_message['content']
+                # Handle legacy PDF format for backward compatibility
+                else:
+                    message['content'] = {
+                        'type': 'document',
+                        'documentType': 'pdf',
                         'text': input_message['content'][0],
-                        'pdf_content': input_message['content'][1]
+                        'content': input_message['content'][1]
                     }
             else:
                 raise ValueError("Invalid message format")
@@ -175,7 +188,6 @@ class CosmosConversationClient():
         
         resp = await self.container_client.upsert_item(message)
         if resp:
-            # update the parent conversations's updatedAt field
             conversation = await self.get_conversation(user_id, conversation_id)
             if not conversation:
                 return "Conversation not found"
@@ -210,12 +222,27 @@ class CosmosConversationClient():
         query = f"SELECT * FROM c WHERE c.conversationId = @conversationId AND c.type='message' AND c.userId = @userId ORDER BY c.timestamp ASC"
         messages = []
         async for item in self.container_client.query_items(query=query, parameters=parameters):
-            # Transform content if it's a PDF structure
-            if isinstance(item.get('content'), dict) and item['content'].get('type') == 'pdf':
-                item['content'] = [
-                    item['content']['text'],
-                    item['content']['pdf_content']
-                ]
+            # Transform stored document content to new format
+            if isinstance(item.get('content'), dict):
+                if item['content'].get('type') == 'document':
+                    item['content'] = [
+                        {'type': 'text', 'text': item['content']['text']},
+                        {
+                            'type': 'document',
+                            'documentType': item['content']['documentType'],
+                            'content': item['content']['content']
+                        }
+                    ]
+                # Handle legacy PDF format
+                elif item['content'].get('type') == 'pdf':
+                    item['content'] = [
+                        {'type': 'text', 'text': item['content']['text']},
+                        {
+                            'type': 'document',
+                            'documentType': 'pdf',
+                            'content': item['content']['pdf_content']
+                        }
+                    ]
             messages.append(item)
 
         return messages
