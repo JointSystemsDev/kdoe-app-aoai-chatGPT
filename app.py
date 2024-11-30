@@ -325,14 +325,13 @@ async def prepare_model_args(request_body, request_headers, environment_settings
     
     if not environment_settings:
         raise ValueError(f"No environment set")
-    
-    if not app_settings.datasource:
-        messages = [
-            {
-                "role": "system",
-                "content": environment_settings['backend_settings']['openai']['system_message']
-            }
-        ]
+
+    messages = [
+        {
+            "role": "system",
+            "content": environment_settings['backend_settings']['openai']['system_message']
+        }
+    ]
 
     for message in request_messages:
         if message:

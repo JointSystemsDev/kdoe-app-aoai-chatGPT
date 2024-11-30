@@ -17,13 +17,13 @@ interface EnvironmentContextType {
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
 
 const INTENDED_ENV_KEY = 'intended_environment';
+const DEFAULT_ENV_ID = 'default';
 
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Helper function to get environment from URL
   const getEnvironmentFromUrl = (): string | null => {
@@ -39,9 +39,10 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const searchParams = new URLSearchParams(search || '');
     searchParams.set('env', envId);
     
-    // Preserve the base hash path (everything before the ?)
     const newHash = `${basePath || '#/'}?${searchParams.toString()}`;
-    window.location.hash = newHash;
+    if (window.location.hash !== newHash) {
+      window.location.hash = newHash;
+    }
   };
 
   // Store intended environment before auth redirect
@@ -56,43 +57,35 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return envId;
   };
 
+  const isValidEnvironment = (envId: string): boolean => {
+    return envId === DEFAULT_ENV_ID || environments.some(env => env.id === envId);
+  };
+
+  // Initial load of environments and environment selection
   useEffect(() => {
     const initializeEnvironments = async () => {
       try {
         setIsLoading(true);
-        setError(null);
         const data = await fetchEnvironments();
         setEnvironments(data);
         
-        if (data.length === 0) {
-          setError('No environments available.');
-          setIsLoading(false);
-          return;
-        }
-
         // Check for intended environment from previous auth redirect
         const intendedEnv = getAndClearIntendedEnvironment();
-        if (intendedEnv && data.some(env => env.id === intendedEnv)) {
+        if (intendedEnv && (intendedEnv === DEFAULT_ENV_ID || data.some(env => env.id === intendedEnv))) {
           setSelectedEnvironment(intendedEnv);
           updateUrlWithEnvironment(intendedEnv);
-          setIsInitialized(true);
-          setIsLoading(false);
           return;
         }
 
-        // Check URL parameter
+        // If no intended environment, check URL
         const urlEnv = getEnvironmentFromUrl();
-        if (urlEnv && data.some(env => env.id === urlEnv)) {
-          // Store the intended environment before potential auth redirect
-          storeIntendedEnvironment(urlEnv);
+        if (urlEnv && (urlEnv === DEFAULT_ENV_ID || data.some(env => env.id === urlEnv))) {
+          storeIntendedEnvironment(urlEnv); // Store for potential auth redirect
           setSelectedEnvironment(urlEnv);
         } else {
-          // Default to first environment if no valid URL parameter
-          setSelectedEnvironment(data[0].id);
-          updateUrlWithEnvironment(data[0].id);
+          setSelectedEnvironment(DEFAULT_ENV_ID);
+          updateUrlWithEnvironment(DEFAULT_ENV_ID);
         }
-
-        setIsInitialized(true);
       } catch (err) {
         setError('Failed to load environments. Please try again later.');
         console.error('Error loading environments:', err);
@@ -101,27 +94,31 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
     };
 
-    if (!isInitialized) {
-      initializeEnvironments();
-    }
-  }, [isInitialized]);
+    initializeEnvironments();
+  }, []); // Only run on mount
 
+  // Handle hash changes
   useEffect(() => {
     const handleHashChange = () => {
       const envId = getEnvironmentFromUrl();
-      if (envId && environments.some(env => env.id === envId) && envId !== selectedEnvironment) {
-        storeIntendedEnvironment(envId);
+      
+      if (envId && isValidEnvironment(envId)) {
+        storeIntendedEnvironment(envId); // Store for potential auth redirect
         setSelectedEnvironment(envId);
+      } else if (!envId) {
+        storeIntendedEnvironment(DEFAULT_ENV_ID);
+        setSelectedEnvironment(DEFAULT_ENV_ID);
+        updateUrlWithEnvironment(DEFAULT_ENV_ID);
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [environments, selectedEnvironment]);
+  }, [environments]); // Only recreate when environments change
 
   const setEnvironment = (environmentId: string) => {
-    if (environments.some(env => env.id === environmentId)) {
-      storeIntendedEnvironment(environmentId);
+    if (isValidEnvironment(environmentId)) {
+      storeIntendedEnvironment(environmentId); // Store for potential auth redirect
       setSelectedEnvironment(environmentId);
       updateUrlWithEnvironment(environmentId);
     }
