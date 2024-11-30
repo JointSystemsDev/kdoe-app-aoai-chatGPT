@@ -12,7 +12,11 @@ class CosmosConversationClient():
         self.container_name = container_name
         self.enable_message_feedback = enable_message_feedback
         try:
-            self.cosmosdb_client = CosmosClient(self.cosmosdb_endpoint, credential=credential)
+            # Remove any extra arguments that might cause issues
+            self.cosmosdb_client = CosmosClient(
+                url=self.cosmosdb_endpoint,  # Use url instead of direct endpoint
+                credential=credential
+            )
         except exceptions.CosmosHttpResponseError as e:
             if e.status_code == 401:
                 raise ValueError("Invalid credentials") from e
