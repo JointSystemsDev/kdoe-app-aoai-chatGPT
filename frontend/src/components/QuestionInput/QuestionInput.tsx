@@ -2,17 +2,13 @@ import { useContext, useEffect, useState } from 'react'
 import { FontIcon, Stack, TextField, TooltipHost } from '@fluentui/react'
 import { SendRegular } from '@fluentui/react-icons'
 import mammoth from 'mammoth'
-
 import Send from '../../assets/Send.svg'
-
 import styles from './QuestionInput.module.css'
 import { ChatMessage, TextContent, DocumentContent, ImageUrlContent } from '../../api'
 import { AppStateContext } from '../../state/AppProvider'
 import { resizeImage } from '../../utils/resizeImage'
-
-import { t } from '../../utils/localization'
 import * as pdfjsLib from 'pdfjs-dist';
-import uuid from 'react-uuid'
+import { useTranslation } from '../../utils/localization'
 
 interface Props {
   onSend: (question: ChatMessage['content'], id?: string) => void
@@ -34,7 +30,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const appStateContext = useContext(AppStateContext);
   const ui = appStateContext?.state.frontendSettings?.ui;
-
+  const t = useTranslation();
   
   useEffect(() => {
     const loadWorker = async () => {
@@ -100,7 +96,8 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
      ).join('\n');
 
      if (!validateDocumentText(pdfString)) {
-       throw new Error(t('The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.'));
+       const m = t('The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.');
+       throw new Error(m);
      }
 
      setDocumentContent({
@@ -115,7 +112,8 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
     const result = await mammoth.extractRawText({ arrayBuffer });
     
     if (!validateDocumentText(result.value)) {
-      throw new Error(t('The uploaded Word document does not contain enough readable text.'));
+      const m = t('The uploaded Word document does not contain enough readable text.');
+      throw new Error(m as string);
     }
 
     setDocumentContent({
