@@ -102,13 +102,23 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const handleHashChange = () => {
       const envId = getEnvironmentFromUrl();
       
-      if (envId && isValidEnvironment(envId)) {
-        storeIntendedEnvironment(envId); // Store for potential auth redirect
-        setSelectedEnvironment(envId);
-      } else if (!envId) {
-        storeIntendedEnvironment(DEFAULT_ENV_ID);
-        setSelectedEnvironment(DEFAULT_ENV_ID);
-        updateUrlWithEnvironment(DEFAULT_ENV_ID);
+      // Check for any auth-related URLs
+      const isInAuthFlow = window.location.href.includes('/.auth/') || 
+                          window.location.href.includes('/login.microsoftonline.com/') ||
+                          window.location.href.includes('/auth.microsoft.com/');
+      
+      if (!isInAuthFlow) {
+        if (envId && isValidEnvironment(envId)) {
+          storeIntendedEnvironment(envId);
+          setSelectedEnvironment(envId);
+        } else if (!envId) {
+          // Don't overwrite existing intended environment during auth flow
+          if (!sessionStorage.getItem(INTENDED_ENV_KEY)) {
+            storeIntendedEnvironment(DEFAULT_ENV_ID);
+          }
+          setSelectedEnvironment(DEFAULT_ENV_ID);
+          updateUrlWithEnvironment(DEFAULT_ENV_ID);
+        }
       }
     };
 
