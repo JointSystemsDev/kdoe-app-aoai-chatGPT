@@ -16,7 +16,7 @@ interface EnvironmentContextType {
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
 
-const INTENDED_ENV_KEY = 'intended_environment';
+const LOCAL_STORAGE_KEY = 'selected_environment';
 const DEFAULT_ENV_ID = 'default';
 
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -25,121 +25,122 @@ export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Helper function to get environment from URL
+  // Get environment ID from URL
   const getEnvironmentFromUrl = (): string | null => {
     const hash = window.location.hash;
     const searchParams = new URLSearchParams(hash.split('?')[1] || '');
-    return searchParams.get('env');
+    const envId = searchParams.get('env');
+    console.log('Environment from URL:', envId);
+    return envId;
   };
 
-  // Helper function to update URL with environment
+  // Update URL with environment
   const updateUrlWithEnvironment = (envId: string) => {
     const hash = window.location.hash;
     const [basePath, search] = hash.split('?');
     const searchParams = new URLSearchParams(search || '');
     searchParams.set('env', envId);
-    
     const newHash = `${basePath || '#/'}?${searchParams.toString()}`;
     if (window.location.hash !== newHash) {
+      console.log('Updating URL with environment:', envId);
       window.location.hash = newHash;
     }
   };
 
-  // Store intended environment before auth redirect
-  const storeIntendedEnvironment = (envId: string) => {
-    sessionStorage.setItem(INTENDED_ENV_KEY, envId);
-  };
-
-  // Retrieve and clear intended environment
-  const getAndClearIntendedEnvironment = (): string | null => {
-    const envId = sessionStorage.getItem(INTENDED_ENV_KEY);
-    sessionStorage.removeItem(INTENDED_ENV_KEY);
-    return envId;
-  };
-
-  const isValidEnvironment = (envId: string): boolean => {
-    return envId === DEFAULT_ENV_ID || environments.some(env => env.id === envId);
-  };
-
-  // Initial load of environments and environment selection
+  // Initialize environments
   useEffect(() => {
     const initializeEnvironments = async () => {
       try {
+        console.log('Initializing environments...');
         setIsLoading(true);
         const data = await fetchEnvironments();
+        console.log('Available environments:', data);
         setEnvironments(data);
         
-        // Check for intended environment from previous auth redirect
-        const intendedEnv = getAndClearIntendedEnvironment();
-        if (intendedEnv && (intendedEnv === DEFAULT_ENV_ID || data.some(env => env.id === intendedEnv))) {
-          setSelectedEnvironment(intendedEnv);
-          updateUrlWithEnvironment(intendedEnv);
+        // Case 1: User starts with link to environment
+        const urlEnvId = getEnvironmentFromUrl();
+        if (urlEnvId && data.some(env => env.id === urlEnvId)) {
+          console.log('Using environment from URL:', urlEnvId);
+          localStorage.setItem(LOCAL_STORAGE_KEY, urlEnvId);
+          setSelectedEnvironment(urlEnvId);
           return;
         }
 
-        // If no intended environment, check URL
-        const urlEnv = getEnvironmentFromUrl();
-        if (urlEnv && (urlEnv === DEFAULT_ENV_ID || data.some(env => env.id === urlEnv))) {
-          storeIntendedEnvironment(urlEnv); // Store for potential auth redirect
-          setSelectedEnvironment(urlEnv);
-        } else {
-          setSelectedEnvironment(DEFAULT_ENV_ID);
-          updateUrlWithEnvironment(DEFAULT_ENV_ID);
+        // Case 2: User has stored environment (after redirect)
+        const storedEnvId = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedEnvId && data.some(env => env.id === storedEnvId)) {
+          console.log('Using stored environment:', storedEnvId);
+          setSelectedEnvironment(storedEnvId);
+          updateUrlWithEnvironment(storedEnvId);
+          return;
         }
+
+        // Default case: Use default environment
+        console.log('Using default environment:', DEFAULT_ENV_ID);
+        setSelectedEnvironment(DEFAULT_ENV_ID);
+        localStorage.setItem(LOCAL_STORAGE_KEY, DEFAULT_ENV_ID);
+        updateUrlWithEnvironment(DEFAULT_ENV_ID);
+
       } catch (err) {
+        console.error('Error initializing environments:', err);
         setError('Failed to load environments. Please try again later.');
-        console.error('Error loading environments:', err);
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeEnvironments();
-  }, []); // Only run on mount
+  }, []);
 
-  // Handle hash changes
+  // Case 3: Handle dropdown changes
+  const handleEnvironmentChange = (envId: string) => {
+    console.log('Environment change requested:', envId);
+    if (environments.some(env => env.id === envId)) {
+      console.log('Setting new environment:', envId);
+      localStorage.setItem(LOCAL_STORAGE_KEY, envId);
+      setSelectedEnvironment(envId);
+      updateUrlWithEnvironment(envId);
+    } else {
+      console.warn('Invalid environment requested:', envId);
+    }
+  };
+
+  // Handle hash changes (for back/forward browser navigation)
   useEffect(() => {
     const handleHashChange = () => {
-      const envId = getEnvironmentFromUrl();
-      
-      // Check for any auth-related URLs
-      const isInAuthFlow = window.location.href.includes('/.auth/') || 
-                          window.location.href.includes('/login.microsoftonline.com/') ||
-                          window.location.href.includes('/auth.microsoft.com/');
-      
-      if (!isInAuthFlow) {
-        if (envId && isValidEnvironment(envId)) {
-          storeIntendedEnvironment(envId);
-          setSelectedEnvironment(envId);
-        } else if (!envId) {
-          // Don't overwrite existing intended environment during auth flow
-          if (!sessionStorage.getItem(INTENDED_ENV_KEY)) {
-            storeIntendedEnvironment(DEFAULT_ENV_ID);
-          }
-          setSelectedEnvironment(DEFAULT_ENV_ID);
-          updateUrlWithEnvironment(DEFAULT_ENV_ID);
-        }
+      const urlEnvId = getEnvironmentFromUrl();
+      console.log('Hash changed, new environment from URL:', urlEnvId);
+      if (urlEnvId && environments.some(env => env.id === urlEnvId)) {
+        console.log('Updating environment from hash change:', urlEnvId);
+        localStorage.setItem(LOCAL_STORAGE_KEY, urlEnvId);
+        setSelectedEnvironment(urlEnvId);
+      } else {
+        console.log('Invalid or no environment in URL after hash change');
       }
     };
 
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [environments]); // Only recreate when environments change
+    return () => {
+      console.log('Cleaning up hash change listener');
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [environments]);
 
-  const setEnvironment = (environmentId: string) => {
-    if (isValidEnvironment(environmentId)) {
-      storeIntendedEnvironment(environmentId); // Store for potential auth redirect
-      setSelectedEnvironment(environmentId);
-      updateUrlWithEnvironment(environmentId);
-    }
-  };
+  // Log state changes
+  useEffect(() => {
+    console.log('Current environment state:', {
+      selectedEnvironment,
+      storedEnvironment: localStorage.getItem(LOCAL_STORAGE_KEY),
+      urlEnvironment: getEnvironmentFromUrl()
+    });
+  }, [selectedEnvironment]);
 
   return (
     <EnvironmentContext.Provider 
       value={{ 
         environments, 
         selectedEnvironment, 
-        setSelectedEnvironment: setEnvironment,
+        setSelectedEnvironment: handleEnvironmentChange,
         isLoading,
         error
       }}
