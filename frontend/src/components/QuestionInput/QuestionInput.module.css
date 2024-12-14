@@ -57,16 +57,15 @@
   height: 30px;
 }
 
-.pdfPreview {
+.documentPreview {
   align-items: center;
   margin-top: 16px;
   padding: 4px;
   border-radius: 4px;
 }
 
-.pdfPreviewIcon {
+.documentIcon {
   font-size: 20px;
-  color: #d83b01;
 }
 
 @media (max-width: 480px) {
@@ -113,4 +112,18 @@
   right: 0;
   font-size: 12px;
   color: gray;
+}
+
+.errorMessage {
+  position: absolute;
+  bottom: -20px;  /* Position it below the character count */
+  left: 0;
+  font-size: 12px;
+  color: #a4262c;  /* Microsoft's red error color */
+  padding-left: 12px;
+}
+
+/* Move character count up if there's an error */
+.hasError .characterCount {
+  bottom: -20px;
 }

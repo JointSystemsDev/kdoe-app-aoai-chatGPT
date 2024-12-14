@@ -34,8 +34,10 @@ import {
   CosmosDBStatus,
   ErrorMessage,
   ExecResults,
-  isImageContent,
+  isDocumentContent,
   isPdfContent,
+  isDocxContent,
+  isImageContent,
 } from "../../api";
 import { Answer } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
@@ -214,7 +216,9 @@ const Chat = () => {
       // Now TypeScript knows question[0] is TextContent
       questionDisplay = question[0].text;
     } else if (isPdfContent(question)) {
-      questionDisplay = question[0];
+      questionDisplay = question[0].text;
+    } else if (isDocxContent(question)) {
+      questionDisplay = question[0].text;
     } else {
       questionDisplay = question as string;
     }
@@ -836,36 +840,41 @@ const Chat = () => {
                   <>
                     {answer.role === 'user' ? (
                       <div className={styles.chatMessageUser} tabIndex={0}>
-                      <div className={styles.chatMessageUserMessage}>
-                        {Array.isArray(answer.content) ? (
-                          isImageContent(answer.content) ? (
-                            <>
-                              {answer.content[0].text}
-                              <img 
-                                className={styles.uploadedImageChat} 
-                                src={(answer.content[1] as { type: string; image_url: { url: string } }).image_url.url} 
-                                alt="Uploaded Preview" 
-                              />
-                            </>
-                          ) : isPdfContent(answer.content) ? (
-                            <>
-                              {answer.content[0]}
-                              <FontIcon
-                                className={styles.pdfIcon}
-                                iconName="PDF"
-                                aria-label="PDF Document"
-                              />
-                            </>
+                        <div className={styles.chatMessageUserMessage}>
+                          {Array.isArray(answer.content) ? (
+                            isImageContent(answer.content) ? (
+                              <>
+                                {answer.content[0].text}
+                                <img 
+                                  className={styles.uploadedImageChat} 
+                                  src={answer.content[1].image_url.url} 
+                                  alt="Uploaded Preview" 
+                                />
+                              </>
+                            ) : isDocumentContent(answer.content) ? (
+                              <>
+                                {answer.content[0].text}
+                                <FontIcon
+                                  className={styles.documentIcon}
+                                  iconName={answer.content[1].documentType === 'pdf' ? "PDF" : "WordDocument"}
+                                  style={{
+                                    color: answer.content[1].documentType === 'pdf' ? '#d83b01' : '#2b579a',
+                                    marginLeft: '12px',
+                                    fontSize: '20px'
+                                  }}
+                                  aria-label={`${answer.content[1].documentType.toUpperCase()} Document`}
+                                />
+                              </>
+                            ) : (
+                              // Regular array content
+                              answer.content[0]
+                            )
                           ) : (
-                            // Regular array content
-                            answer.content[0]
-                          )
-                        ) : (
-                          // Regular string content
-                          answer.content
-                        )}
+                            // Regular string content
+                            answer.content
+                          )}
+                        </div>
                       </div>
-                    </div>
                     ) : answer.role === 'assistant' ? (
                       <div className={styles.chatMessageGpt}>
                         {typeof answer.content === "string" && <Answer

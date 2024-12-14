@@ -196,7 +196,7 @@ frontend_settings = {
 # Enable Microsoft Defender for Cloud Integration
 MS_DEFENDER_ENABLED = os.environ.get("MS_DEFENDER_ENABLED", "true").lower() == "true"
 
-def build_openai_request_params():
+def build_openai_request_params(environment_id):
     """
     Builds the extra headers and query parameters for OpenAI API requests based on environment settings.
     
@@ -225,10 +225,9 @@ def build_openai_request_params():
     # Add organization and app name to query parameters if both are available
     if app_settings.azure_openai.apim_organization and app_settings.azure_openai.apim_appname:
         default_query.update({
-            "organizationName": app_settings.azure_openai.apim_organization,
-            "appName": app_settings.azure_openai.apim_appname
+            "appName": app_settings.azure_openai.apim_appname,
+            "organizationName": app_settings.azure_openai.apim_organization + "." + environment_id
         })
-    
     return extra_headers, default_query
 
 # Initialize Azure OpenAI Client
@@ -245,20 +244,16 @@ async def init_openai_client(environment_settings: Optional[Dict[str, Any]] = No
                 f"Minimum supported Azure OpenAI preview API version is '{MINIMUM_SUPPORTED_AZURE_OPENAI_PREVIEW_API_VERSION}'"
             )
 
-        # Base headers
+        # Base headers - simplified to essential headers only
         default_headers = {
-            "x-ms-useragent": USER_AGENT,
-            "Content-Type": "application/json"
+            "x-ms-useragent": USER_AGENT
         }
         
         # Configure endpoint and headers for APIM or direct OpenAI access
         if app_settings.azure_openai.apim_endpoint:
-            # Use APIM-specific endpoint and headers
             endpoint = app_settings.azure_openai.apim_endpoint
         else:
-            # Fallback to the direct Azure OpenAI endpoint if APIM is not configured
             endpoint = f"https://{app_settings.azure_openai.resource}.openai.azure.com/"
-            default_headers["api-key"] = app_settings.azure_openai.key  # Include API key if direct access
 
         # Set up authentication
         aoai_api_key = app_settings.azure_openai.key
@@ -267,24 +262,28 @@ async def init_openai_client(environment_settings: Optional[Dict[str, Any]] = No
         # Configure Azure AD authentication if API key is not used
         if not aoai_api_key:
             logging.info("Using Azure Entra ID authentication")
-            credential = DefaultAzureCredential()
-            ad_token_provider = get_bearer_token_provider(
-                credential,
-                "https://cognitiveservices.azure.com/.default"
-            )
+            async with DefaultAzureCredential() as credential:
+                ad_token_provider = get_bearer_token_provider(
+                    credential,
+                    "https://cognitiveservices.azure.com/.default"
+                )
 
-        # Return configured AsyncAzureOpenAI client
-        return AsyncAzureOpenAI(
+        # Create client with minimal configuration to avoid proxy issues
+        client = AsyncAzureOpenAI(
             api_version=app_settings.azure_openai.preview_api_version,
             api_key=aoai_api_key,
             azure_ad_token_provider=ad_token_provider,
+            azure_endpoint=endpoint,
             default_headers=default_headers,
-            azure_endpoint=endpoint
+            max_retries=3,  # Add retry logic
+            timeout=60.0    # Add explicit timeout
         )
+
+        return client
 
     except Exception as e:
         logging.exception("Failed to initialize Azure OpenAI client")
-        raise
+        raise e
 
 
 async def init_cosmosdb_client():
@@ -320,20 +319,19 @@ async def init_cosmosdb_client():
 
 async def prepare_model_args(request_body, request_headers, environment_settings):
     request_messages = request_body.get("messages", [])
-    extra_headers, extra_query = build_openai_request_params()
+    extra_headers, extra_query = build_openai_request_params(environment_settings['id'])
 
     messages = []
     
     if not environment_settings:
         raise ValueError(f"No environment set")
-    
-    if not app_settings.datasource:
-        messages = [
-            {
-                "role": "system",
-                "content": environment_settings['backend_settings']['openai']['system_message']
-            }
-        ]
+
+    messages = [
+        {
+            "role": "system",
+            "content": environment_settings['backend_settings']['openai']['system_message']
+        }
+    ]
 
     for message in request_messages:
         if message:
@@ -343,13 +341,20 @@ async def prepare_model_args(request_body, request_headers, environment_settings
                 if len(content) == 2:
                     # Check if it's an image message
                     if isinstance(content[0], dict) and 'type' in content[0]:
-                        # Keep image messages as is
-                        messages.append({
-                            "role": message["role"],
-                            "content": content
-                        })
+                        if content[1].get('type') == 'document':
+                            # For document types, format similarly to legacy PDF content
+                            messages.append({
+                                "role": message["role"],
+                                "content": f"{content[0]['text']}\n\nAdditional Context:\n{content[1]['content']}"
+                            })
+                        else:
+                            # Keep image messages as is
+                            messages.append({
+                                "role": message["role"],
+                                "content": content
+                            })
                     else:
-                        # For PDF content, join with separator
+                        # For legacy PDF content, join with separator
                         messages.append({
                             "role": message["role"],
                             "content": f"{content[0]}\n\nAdditional Context:\n{content[1]}"
@@ -364,6 +369,7 @@ async def prepare_model_args(request_body, request_headers, environment_settings
                     "content": content
                 })
 
+    # Rest of the function remains the same...
     if (MS_DEFENDER_ENABLED):
         authenticated_user_details = get_authenticated_user_details(request_headers)
         conversation_id = request_body.get("conversation_id", None)
@@ -383,9 +389,8 @@ async def prepare_model_args(request_body, request_headers, environment_settings
         "user": user_json if MS_DEFENDER_ENABLED else None,
         "extra_headers": extra_headers,
         "extra_query": extra_query
-        }
+    }
 
-    #if app_settings.datasource:
     azure_search_settings = environment_settings['backend_settings']['azure_search']
     if azure_search_settings['service']:
         model_args["extra_body"] = {
@@ -1090,7 +1095,7 @@ async def generate_title(conversation_messages, environment_settings) -> str:
 
     try:
         azure_openai_client = await init_openai_client(environment_settings)
-        extra_headers, extra_query = build_openai_request_params()
+        extra_headers, extra_query = build_openai_request_params(environment_settings['id'])
         response = await azure_openai_client.chat.completions.create(
             model=app_settings.azure_openai.model,
             messages=processed_messages,

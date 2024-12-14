@@ -11,3 +11,4 @@ shortpdftest.pdf
 .env.kdoe.txt
 dummy-environments.json
 .env.environments.json
+/.vs

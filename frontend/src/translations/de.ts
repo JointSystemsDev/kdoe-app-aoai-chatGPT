@@ -35,10 +35,12 @@ export const de = {
   'Chat history': 'Chatverlauf',
   'AI-generated content may be incorrect': 'AI-generierter Inhalt kann falsch sein.',
   'Generating answer...': 'Erzeuge Antwort',
-  'Bild oder PDF hochladen': '',
+  'Upload Image, PDF, or Word Document': 'Bild, PDF oder Word Dokument (docx) hochladen',
   'Switch Environment?': 'Chat Umgebung wechseln',
   'You have an active chat in': 'Sie haben einen aktiven Chat in',
   'Switching to': 'Das Wechseln zu',
   'will start a new chat. Do you want to continue': 'wird einen neuen Chat starten. Wollen Sie weiter machen',
-  'Switch': 'Wechseln'
+  'Switch': 'Wechseln',
+  'The uploaded Word document does not contain enough readable text.': 'Das hochgeladene Word-Dokument enthält nicht genügend lesbaren Text.',
+  'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': 'Das hochgeladene PDF enthält nicht genügend lesbaren Text. Das Dokument könnte gescannt sein oder der Text ist möglicherweise nicht maschinenlesbar.'
 };

@@ -49,33 +49,50 @@ export type ImageUrlContent = {
   };
 }
 
+export type DocumentContent = {
+  type: "document";
+  documentType: "pdf" | "docx";
+  content: string;
+}
+
 export type ImageMessageContent = [TextContent, ImageUrlContent];
+export type DocumentMessageContent = [TextContent, DocumentContent];
 
 export type ChatMessage = {
   id: string
   role: string
-  content: string | string[] | ImageMessageContent
+  content: string | ImageMessageContent | DocumentMessageContent
   end_turn?: boolean
   date: string
   feedback?: Feedback
   context?: string
 }
 
-// Add type guard functions
-export const isImageContent = (content: any): content is ImageMessageContent => {
+// Type guards for content type checking
+export function isImageContent(content: ChatMessage['content']): content is ImageMessageContent {
   return Array.isArray(content) && 
          content.length === 2 && 
-         content[0]?.type === 'text' &&
-         content[1]?.type === 'image_url' &&
-         'text' in content[0] &&
-         'image_url' in content[1];
+         'type' in content[0] && 
+         content[0].type === 'text' &&
+         'type' in content[1] && 
+         content[1].type === 'image_url';
 }
 
-export const isPdfContent = (content: any): content is string[] => {
+export function isDocumentContent(content: ChatMessage['content']): content is DocumentMessageContent {
   return Array.isArray(content) && 
          content.length === 2 && 
-         typeof content[0] === 'string' &&
-         typeof content[1] === 'string';
+         'type' in content[0] && 
+         content[0].type === 'text' &&
+         'type' in content[1] && 
+         content[1].type === 'document';
+}
+
+export function isPdfContent(content: ChatMessage['content']): content is DocumentMessageContent {
+  return isDocumentContent(content) && content[1].documentType === 'pdf';
+}
+
+export function isDocxContent(content: ChatMessage['content']): content is DocumentMessageContent {
+  return isDocumentContent(content) && content[1].documentType === 'docx';
 }
 
 export type ExecResults = {

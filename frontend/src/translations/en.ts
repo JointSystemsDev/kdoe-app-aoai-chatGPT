@@ -35,12 +35,14 @@ export const en = {
     'Chat history': '',
     'AI-generated content may be incorrect': '',
     'Generating answer...': '',
-    'Upload Image or PDF': '',
+    'Upload Image, PDF, or Word Document': 'Bild, PDF oder Word Dokument (docx) hochladen',
     'Switch Environment?': '',
     'You have an active chat in': '',
     'Switching to': '',
     'will start a new chat. Do you want to continue': '',
-    'Switch': ''
+    'Switch': '',
+    'The uploaded Word document does not contain enough readable text.': '',
+    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': ''
   };
 
   // {t('Citations')}

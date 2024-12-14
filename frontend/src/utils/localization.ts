@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useCallback, useContext } from "react";
 import { AppStateContext } from "../state/AppProvider";
 import { de } from "../translations/de";
 import { en } from "../translations/en";
@@ -22,4 +22,15 @@ export function t(key: string): string {
   const ui = appStateContext?.state.frontendSettings?.ui
   let lang = ui?.language ?? 'en'
   return translations[lang]?.[key] || key;
+}
+
+export function useTranslation() {
+  const appStateContext = useContext(AppStateContext);
+  
+  const translate = useCallback((key: string): string => {
+    const lang = appStateContext?.state.frontendSettings?.ui?.language ?? 'en';
+    return translations[lang]?.[key] || key;
+  }, [appStateContext?.state.frontendSettings?.ui?.language]);
+
+  return translate;
 }
