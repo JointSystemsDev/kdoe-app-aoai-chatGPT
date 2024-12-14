@@ -124,6 +124,11 @@ const Layout = () => {
                   <h1 className={styles.headerTitle}>{ui?.help_link_title}</h1>
                 </Link>
             )}
+            {(appStateContext?.state.userInfo?.isAdmin || appStateContext?.state.userInfo?.isPowerUser) && (
+              <Link to="/configuration" className={styles.configLink}>
+                Configuration
+              </Link>
+            )}
           </Stack>
           <Stack horizontal tokens={{ childrenGap: 4 }} className={styles.shareButtonContainer}>
             {

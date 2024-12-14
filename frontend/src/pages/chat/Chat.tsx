@@ -117,7 +117,6 @@ const Chat = () => {
   useEffect(() => {
     if (!appStateContext?.state.isLoading) {
       const logoUrl = processLogoUrl(ui?.chat_logo || ui?.logo);
-      console.log('Setting chat logo to:', logoUrl); // Debug log
       setLogo(logoUrl);
     }
   }, [appStateContext?.state.isLoading, ui?.chat_logo, ui?.logo, selectedEnvironment]);

@@ -1112,5 +1112,189 @@ async def generate_title(conversation_messages, environment_settings) -> str:
             return " ".join(words)
         return "New Conversation"
 
+@bp.route("/api/configurations", methods=["GET"])
+async def get_configurations():
+    """Get list of configurations based on user's permission level"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        # Check user permissions
+        is_admin = user_id in app_settings.base_settings.admin_users
+        is_power_user = user_id in app_settings.base_settings.power_users
+
+        if not (is_admin or is_power_user):
+            return jsonify({"error": "Unauthorized"}), 403
+
+        environments = await current_app.environment_service.get_environments(
+            user_id if not is_admin else None  # Pass None to get all environments for admins
+        )
+        
+        return jsonify(environments), 200
+    except Exception as e:
+        logging.exception("Error fetching configurations")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route("/api/configurations", methods=["POST"])
+async def create_configuration():
+    """Create a new configuration"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        is_admin = user_id in app_settings.base_settings.admin_users
+        is_power_user = user_id in app_settings.base_settings.power_users
+
+        if not (is_admin or is_power_user):
+            return jsonify({"error": "Unauthorized"}), 403
+
+        request_json = await request.get_json()
+        target_user_id = request_json.get("userId", user_id)
+        
+        # Only admins can create configurations for other users
+        if target_user_id != user_id and not is_admin:
+            return jsonify({"error": "Unauthorized to create configurations for other users"}), 403
+
+        # For global configurations, use the special user ID
+        if request_json.get("isGlobal", False):
+            if not is_admin:
+                return jsonify({"error": "Unauthorized to create global configurations"}), 403
+            target_user_id = "00000000-0000-0000-0000-000000000000"
+
+        new_config = await current_app.environment_service.create_environment(
+            target_user_id,
+            request_json
+        )
+        
+        return jsonify(new_config), 201
+    except Exception as e:
+        logging.exception("Error creating configuration")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route("/api/configurations/<config_id>", methods=["PUT"])
+async def update_configuration(config_id):
+    """Update an existing configuration"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        is_admin = user_id in app_settings.base_settings.admin_users
+        is_power_user = user_id in app_settings.base_settings.power_users
+
+        if not (is_admin or is_power_user):
+            return jsonify({"error": "Unauthorized"}), 403
+
+        request_json = await request.get_json()
+        
+        # Get the existing configuration to check ownership
+        existing_config = await current_app.environment_service.get_environment(config_id)
+        if not existing_config:
+            return jsonify({"error": "Configuration not found"}), 404
+
+        # Check permissions
+        if existing_config["userId"] != user_id and not is_admin:
+            return jsonify({"error": "Unauthorized to modify this configuration"}), 403
+
+        updated_config = await current_app.environment_service.update_environment(
+            existing_config["userId"],
+            config_id,
+            request_json
+        )
+        
+        return jsonify(updated_config), 200
+    except Exception as e:
+        logging.exception("Error updating configuration")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route("/api/configurations/<config_id>", methods=["DELETE"])
+async def delete_configuration(config_id):
+    """Delete a configuration"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        is_admin = user_id in app_settings.base_settings.admin_users
+        is_power_user = user_id in app_settings.base_settings.power_users
+
+        if not (is_admin or is_power_user):
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Get the existing configuration to check ownership
+        existing_config = await current_app.environment_service.get_environment(config_id)
+        if not existing_config:
+            return jsonify({"error": "Configuration not found"}), 404
+
+        # Check permissions
+        if existing_config["userId"] != user_id and not is_admin:
+            return jsonify({"error": "Unauthorized to delete this configuration"}), 403
+
+        success = await current_app.environment_service.delete_environment(
+            existing_config["userId"],
+            config_id
+        )
+        
+        if success:
+            return jsonify({"message": "Configuration deleted successfully"}), 200
+        return jsonify({"error": "Failed to delete configuration"}), 500
+    except Exception as e:
+        logging.exception("Error deleting configuration")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route("/api/configurations/<config_id>/clone", methods=["POST"])
+async def clone_configuration(config_id):
+    """Clone an existing configuration"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        if not current_app.environment_service:
+            raise Exception("Environment service not configured")
+
+        is_admin = user_id in app_settings.base_settings.admin_users
+        is_power_user = user_id in app_settings.base_settings.power_users
+
+        if not (is_admin or is_power_user):
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Get the existing configuration to clone
+        existing_config = await current_app.environment_service.get_environment(config_id)
+        if not existing_config:
+            return jsonify({"error": "Configuration not found"}), 404
+
+        # Create new configuration with cloned settings
+        clone_data = {
+            "name": f"Clone of {existing_config['name']}",
+            "settings": existing_config["settings"],
+            "backend_settings": existing_config["backend_settings"]
+        }
+
+        request_json = await request.get_json()
+        target_user_id = request_json.get("userId", user_id)
+        
+        # Only admins can create configurations for other users
+        if target_user_id != user_id and not is_admin:
+            return jsonify({"error": "Unauthorized to create configurations for other users"}), 403
+
+        new_config = await current_app.environment_service.create_environment(
+            target_user_id,
+            clone_data
+        )
+        
+        return jsonify(new_config), 201
+    except Exception as e:
+        logging.exception("Error cloning configuration")
+        return jsonify({"error": str(e)}), 500
 
 app = create_app()

@@ -16,7 +16,7 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_snake
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 from typing_extensions import Self
 from quart import Request
 from backend.utils import parse_multi_columns, generateFilterString
@@ -751,13 +751,14 @@ class _BaseSettings(BaseSettings):
         env_file=DOTENV_PATH,
         extra="ignore",
         arbitrary_types_allowed=True,
-        env_ignore_empty=True
+        env_ignore_empty=True,
     )
+    admin_users: List[str] = Field(default_factory=list)
+    power_users: List[str] = Field(default_factory=list)
     datasource_type: Optional[str] = None
     auth_enabled: bool = True
     sanitize_answer: bool = False
     use_promptflow: bool = False
-
 
 
 class _AzureStorageSettings(BaseSettings):

@@ -1,7 +1,21 @@
 import { chatHistorySampleData } from '../constants/chatHistory'
 import { useEnvironment } from '../state/EnvironmentProvider';
-
 import { ChatMessage, Conversation, ConversationRequest, CosmosDBHealth, CosmosDBStatus, UserInfo, Environment } from './models'
+
+const isLocalDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// Mock user for local development
+const mockUserInfo: UserInfo[] = [{
+  access_token: "mock-token",
+  expires_on: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+  id_token: "mock-id-token",
+  provider_name: "local",
+  user_claims: [
+    { typ: "name", val: "Local Developer" },
+    { typ: "roles", val: "admin" }  // or "poweruser"
+  ],
+  user_id: "local-dev-user"
+}];
 
 export async function conversationApi(options: ConversationRequest, abortSignal: AbortSignal): Promise<Response> {
   const { selectedEnvironment } = useEnvironment();
@@ -22,6 +36,12 @@ export async function conversationApi(options: ConversationRequest, abortSignal:
 }
 
 export async function getUserInfo(): Promise<UserInfo[]> {
+
+  if (isLocalDevelopment) {
+    console.log('Using mock authentication for local development');
+    return mockUserInfo;
+  }
+
   const response = await fetch('/.auth/me')
   if (!response.ok) {
     console.log('No identity provider found. Access to chat will be blocked.')

@@ -1,0 +1,96 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 20px;
+    height: 100%;
+    overflow: auto;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+  }
+  
+  .title {
+    font-size: 24px;
+    font-weight: 600;
+  }
+  
+  .listContainer {
+    background: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+    flex: 1;
+    overflow: auto;
+  }
+  
+  .dialogContent {
+    min-height: 500px;
+    max-height: 80vh;
+    overflow: auto;
+  }
+  
+  .formSection {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+  }
+  
+  .formSection h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .buttonContainer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+  }
+  
+  .errorText {
+    color: #a4262c;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  
+  .globalBadge {
+    background-color: #0078d4;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  
+  .userBadge {
+    background-color: #107c10;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 8px;
+  }
+  
+  .loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+  
+  .error {
+    color: #a4262c;
+    padding: 10px;
+    background-color: #fed9cc;
+    border-radius: 4px;
+    margin: 10px 0;
+  }

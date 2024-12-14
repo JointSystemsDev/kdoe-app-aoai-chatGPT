@@ -1,19 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, validator
-from typing import Optional, Self
+from typing import Optional
 
 class OpenAISettings(BaseModel):
-    model_config = ConfigDict(
-        protected_namespaces=()  # Disable protected namespace checking
-    )
-    resource: str
-    # model: str
-    # key: str
-    # deployment_name: str = Field(..., description="The deployment name of the model")  # Changed from model_name
+    # Remove resource requirement since it's not used in your config
+    resource: Optional[str] = None
     temperature: float = 0.7
     top_p: float = 0.95
     max_tokens: int = 1000
     system_message: str
-    # preview_api_version: str
     embedding_name: Optional[str] = None
     embedding_endpoint: Optional[str] = None
     embedding_key: Optional[str] = None
@@ -22,28 +16,22 @@ class SearchSettings(BaseModel):
     top_k: int = 5
     strictness: int = 3
     enable_in_domain: bool = True
-    datasource_type: str = None # "AzureCognitiveSearch"
-
-    @field_validator("top_k")
-    def validate_top_k(cls, v):
-        if v < 1:
-            raise ValueError("top_k must be at least 1")
-        return v
+    datasource_type: Optional[str] = None  # Make optional since it can be None
 
 class AzureSearchSettings(BaseModel):
-    service: str
-    index: str
-    key: str
+    service: Optional[str] = None          # Make fields optional
+    index: Optional[str] = None
+    key: Optional[str] = None
     query_type: str = "vectorSimpleHybrid"
-    semantic_search_config: str = ""
-    index_is_prechunked: bool = True
+    semantic_search_config: Optional[str] = None
+    index_is_prechunked: bool = False
     top_k: int = 5
     enable_in_domain: bool = False
-    content_columns: str = "chunk"
-    filename_column: str = "id"
-    title_column: str = "title"
+    content_columns: Optional[str] = None
+    filename_column: Optional[str] = None
+    title_column: Optional[str] = None
     url_column: Optional[str] = None
-    vector_columns: str = "text_vector"
+    vector_columns: Optional[str] = None
     permitted_groups_column: Optional[str] = None
     strictness: int = 3
 
