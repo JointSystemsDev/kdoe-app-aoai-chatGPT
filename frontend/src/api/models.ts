@@ -192,12 +192,18 @@ export type UI = {
   enable_mode_selector?: boolean,
 }
 
+export type UserRoleInfo = {
+  isAdmin: boolean;
+  isPowerUser: boolean;
+}
+
 export type FrontendSettings = {
-  auth_enabled?: string | null
-  feedback_enabled?: string | null
-  ui?: UI
-  sanitize_answer?: boolean
-  oyd_enabled?: boolean
+  auth_enabled?: string | null;
+  feedback_enabled?: string | null;
+  ui?: UI;
+  sanitize_answer?: boolean;
+  oyd_enabled?: boolean;
+  userInfo?: UserRoleInfo;
 }
 
 export enum Feedback {

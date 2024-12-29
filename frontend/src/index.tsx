@@ -21,10 +21,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!appStateContext?.state.userInfo?.isAdmin && !appStateContext?.state.userInfo?.isPowerUser) {
+    if (!appStateContext?.state.frontendSettings?.userInfo?.isAdmin && !appStateContext?.state.frontendSettings?.userInfo?.isPowerUser) {
       navigate('/');
     }
-  }, [appStateContext?.state.userInfo]);
+  }, [appStateContext?.state.frontendSettings?.userInfo]);
 
   return <>{children}</>;
 };

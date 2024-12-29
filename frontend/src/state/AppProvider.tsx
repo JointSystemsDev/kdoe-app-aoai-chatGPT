@@ -2,8 +2,7 @@ import React, {
   createContext,
   ReactNode,
   useEffect,
-  useReducer,
-  useRef
+  useReducer
 } from 'react'
 
 import {
@@ -14,14 +13,12 @@ import {
   Feedback,
   FrontendSettings,
   frontendSettings,
-  getUserInfo,
   historyEnsure,
   historyList
 } from '../api'
 
 import { appStateReducer } from './AppReducer'
 import { useEnvironment } from './EnvironmentProvider'
-import { initializeUserInfo, AppUserInfo } from '../utils/authUtils';
 
 export interface AppState {
   isChatHistoryOpen: boolean
@@ -34,7 +31,6 @@ export interface AppState {
   feedbackState: { [answerId: string]: Feedback.Neutral | Feedback.Positive | Feedback.Negative }
   isLoading: boolean;
   answerExecResult: { [answerId: string]: [] }
-  userInfo: AppUserInfo | null;
 }
 
 export type Action =
@@ -57,7 +53,6 @@ export type Action =
   | { type: 'GET_FEEDBACK_STATE'; payload: string }
   | { type: 'SET_ANSWER_EXEC_RESULT'; payload: { answerId: string, exec_result: [] } }
   | { type: 'RESET_CHAT_STATE' }
-  | { type: 'SET_USER_INFO'; payload: AppState['userInfo'] }
 
 const initialState: AppState = {
   isChatHistoryOpen: false,
@@ -72,8 +67,7 @@ const initialState: AppState = {
   frontendSettings: null,
   feedbackState: {},
   isLoading: true,
-  answerExecResult: {},
-  userInfo: null
+  answerExecResult: {}
 }
 
 export const AppStateContext = createContext<
@@ -91,24 +85,6 @@ type AppStateProviderProps = {
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appStateReducer, initialState);
   const { selectedEnvironment } = useEnvironment();
-  const userIdLogged = useRef(false);  // Use ref to track if we've logged the ID
-
-  useEffect(() => {
-    debugger;
-    const getUserDetails = async () => {
-      try {
-        const userInfo = await getUserInfo();
-        if (userInfo.length > 0 && !userIdLogged.current) {
-          console.log('Current user ID (for admin configuration):', userInfo[0].user_id);
-          userIdLogged.current = true;
-        }
-      } catch (error) {
-        console.error('Error fetching user info:', error);
-      }
-    };
-
-    getUserDetails();
-  }, []); 
 
   useEffect(() => {
     // Check for cosmosdb config and fetch initial data here
@@ -171,20 +147,6 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     getHistoryEnsure()
   }, [selectedEnvironment])
 
-  useEffect(() => {
-    const initUser = async () => {
-      try {
-        const userInfoList = await getUserInfo();
-        const userInfo = await initializeUserInfo(userInfoList);
-        dispatch({ type: 'SET_USER_INFO', payload: userInfo });
-      } catch (error) {
-        console.error('Error initializing user:', error);
-        dispatch({ type: 'SET_USER_INFO', payload: null });
-      }
-    };
-
-    initUser();
-  }, []);
 
   // Effect for handling environment changes
   useEffect(() => {

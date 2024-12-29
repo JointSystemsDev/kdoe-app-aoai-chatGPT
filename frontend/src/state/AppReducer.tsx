@@ -90,12 +90,6 @@ export const appStateReducer = (state: AppState, action: Action): AppState => {
           feedbackState: {},
           answerExecResult: {},
         }
-    case 'SET_USER_INFO': {
-        return {
-          ...state,
-          userInfo: action.payload
-        };
-      }
     default:
       return state
   }

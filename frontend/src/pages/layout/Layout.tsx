@@ -24,7 +24,8 @@ const Layout = () => {
   const [logo, setLogo] = useState('')
   const appStateContext = useContext(AppStateContext)
   const { selectedEnvironment } = useEnvironment()
-  const ui = appStateContext?.state.frontendSettings?.ui
+  const ui = appStateContext?.state.frontendSettings?.ui;
+  const userInfo = appStateContext?.state.frontendSettings?.userInfo;
 
   const handleShareClick = () => {
     setIsSharePanelOpen(true)
@@ -124,7 +125,9 @@ const Layout = () => {
                   <h1 className={styles.headerTitle}>{ui?.help_link_title}</h1>
                 </Link>
             )}
-            {(appStateContext?.state.userInfo?.isAdmin || appStateContext?.state.userInfo?.isPowerUser) && (
+            
+            {(
+              userInfo?.isAdmin || userInfo?.isPowerUser) && (
               <Link to="/configuration" className={styles.configLink}>
                 Configuration
               </Link>

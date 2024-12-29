@@ -141,6 +141,12 @@ async def get_frontend_settings():
         # Get base settings
         settings = frontend_settings
 
+        # Add user role information
+        settings["userInfo"] = {
+            "isAdmin": user_id in app_settings.base_settings.admin_users,
+            "isPowerUser": user_id in app_settings.base_settings.power_users
+        }
+
         # If environment is specified, get environment settings
         if env_id and current_app.environment_service:
             environments = await current_app.environment_service.get_environments(user_id)

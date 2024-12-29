@@ -44,10 +44,10 @@ export const ConfigurationPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!appStateContext?.state.userInfo?.isAdmin && !appStateContext?.state.userInfo?.isPowerUser) {
+    if (!appStateContext?.state.frontendSettings?.userInfo?.isAdmin && !appStateContext?.state.frontendSettings?.userInfo?.isPowerUser) {
       navigate('/');
     }
-  }, [appStateContext?.state.userInfo]);
+  }, [appStateContext?.state.frontendSettings?.userInfo]);
 
   useEffect(() => {
     loadConfigurations();
@@ -242,7 +242,7 @@ export const ConfigurationPage: React.FC = () => {
           setSelectedConfig(null);
         }}
         onSave={handleSave}
-        isAdmin={appStateContext?.state.userInfo?.isAdmin || false}
+        isAdmin={appStateContext?.state.frontendSettings?.userInfo?.isAdmin || false}
       />
     </Stack>
   );
