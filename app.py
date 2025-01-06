@@ -147,6 +147,8 @@ async def get_frontend_settings():
             "isPowerUser": user_id in app_settings.base_settings.power_users
         }
 
+        print(f"/frontend_settings user_id: {user_id} environment_id: {env_id}")
+
         # If environment is specified, get environment settings
         if env_id and current_app.environment_service:
             environments = await current_app.environment_service.get_environments(user_id)

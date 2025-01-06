@@ -35,7 +35,7 @@ export const en = {
     'Chat history': '',
     'AI-generated content may be incorrect': '',
     'Generating answer...': '',
-    'Upload Image, PDF, or Word Document': 'Bild, PDF oder Word Dokument (docx) hochladen',
+    'Upload Image, PDF, or Word Document': '',
     'Switch Environment?': '',
     'You have an active chat in': '',
     'Switching to': '',

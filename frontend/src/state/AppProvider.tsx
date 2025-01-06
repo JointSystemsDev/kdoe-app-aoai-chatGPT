@@ -2,7 +2,8 @@ import React, {
   createContext,
   ReactNode,
   useEffect,
-  useReducer
+  useReducer,
+  useRef
 } from 'react'
 
 import {
@@ -13,6 +14,7 @@ import {
   Feedback,
   FrontendSettings,
   frontendSettings,
+  getUserInfo,
   historyEnsure,
   historyList
 } from '../api'
@@ -85,6 +87,7 @@ type AppStateProviderProps = {
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appStateReducer, initialState);
   const { selectedEnvironment } = useEnvironment();
+  const userIdLogged = useRef(false);  // Use ref to track if we've logged the ID
 
   useEffect(() => {
     // Check for cosmosdb config and fetch initial data here
@@ -147,6 +150,24 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     getHistoryEnsure()
   }, [selectedEnvironment])
 
+  useEffect(() => {
+    const getUserDetails = async () => {
+      try {
+        const userInfo = await getUserInfo();
+        if (userInfo.length > 0 && !userIdLogged.current) {
+          const objectIdClaim = userInfo[0].user_claims.find(
+            claim => claim.typ === "http://schemas.microsoft.com/identity/claims/objectidentifier"
+          );
+          
+          console.log('Current user ID (for admin configuration):', userInfo[0].user_id, 'Object ID for environment variables:', objectIdClaim?.val);
+          userIdLogged.current = true;
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+    getUserDetails();
+  }, []);
 
   // Effect for handling environment changes
   useEffect(() => {

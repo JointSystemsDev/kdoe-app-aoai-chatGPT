@@ -111,7 +111,6 @@ export const ConfigurationPage: React.FC = () => {
   const handleSave = async (data: any) => {
     try {
 
-      debugger;
       const url = dialogMode === 'edit' 
         ? `/api/configurations/${selectedConfig?.id}`
         : '/api/configurations';
