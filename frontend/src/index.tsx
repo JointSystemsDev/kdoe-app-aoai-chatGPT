@@ -13,7 +13,9 @@ import { AppStateContext } from './state/AppProvider'
 import './index.css'
 import ConfigurationPage from './components/Environment/ConfigurationPage'
 
-initializeIcons()
+initializeIcons(
+  'https://res.cdn.office.net/files/fabric-cdn-prod_20240129.001/assets/icons/',
+);
 
 // Protected Route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
