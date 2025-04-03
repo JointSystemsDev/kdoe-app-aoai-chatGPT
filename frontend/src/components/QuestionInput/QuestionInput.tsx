@@ -31,7 +31,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   const appStateContext = useContext(AppStateContext);
   const ui = appStateContext?.state.frontendSettings?.ui;
   const t = useTranslation();
-  
+
   useEffect(() => {
     const loadWorker = async () => {
       // @ts-ignore
@@ -49,11 +49,11 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    
+
     if (file) {
       // Clear any existing error
       setErrorMessage(null);
-      
+
       try {
         if (file.type === 'application/pdf') {
           await handlePdfUpload(file);
@@ -73,44 +73,44 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
   };
 
   const handlePdfUpload = async (file: File) => {
-     const arrayBuffer = await file.arrayBuffer();
-     const loadingTask = pdfjsLib.getDocument(arrayBuffer);
-     const pdf = await loadingTask.promise;
-     const numPages = pdf.numPages;
-     const pages: PageContents[] = [];
-     
-     for (let i = 1; i <= numPages; i++) {
-       const page = await pdf.getPage(i);
-       const textContent = await page.getTextContent();
-       pages.push({
-         pageNumber: i,
-         textContent: textContent.items.map(item => {
-           return 'str' in item ? item.str : '';
-         }).join(' ')
-       });
-     }	
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+    const pdf = await loadingTask.promise;
+    const numPages = pdf.numPages;
+    const pages: PageContents[] = [];
 
-     const pdfString = pages.map(page => 
-       // `Page Number: ${page.pageNumber}\n${page.textContent}`
-       `\n${page.textContent}`
-     ).join('\n');
+    for (let i = 1; i <= numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      pages.push({
+        pageNumber: i,
+        textContent: textContent.items.map(item => {
+          return 'str' in item ? item.str : '';
+        }).join(' ')
+      });
+    }
 
-     if (!validateDocumentText(pdfString)) {
-       const m = t('The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.');
-       throw new Error(m);
-     }
+    const pdfString = pages.map(page =>
+      // `Page Number: ${page.pageNumber}\n${page.textContent}`
+      `\n${page.textContent}`
+    ).join('\n');
 
-     setDocumentContent({
-       type: 'document',
-       documentType: 'pdf',
-       content: pdfString
-     });
+    if (!validateDocumentText(pdfString)) {
+      const m = t('The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.');
+      throw new Error(m);
+    }
+
+    setDocumentContent({
+      type: 'document',
+      documentType: 'pdf',
+      content: pdfString
+    });
   }
 
   const handleDocxUpload = async (file: File) => {
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
-    
+
     if (!validateDocumentText(result.value)) {
       const m = t('The uploaded Word document does not contain enough readable text.');
       throw new Error(m as string);
@@ -141,9 +141,9 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
       type: "text",
       text: question
     };
-  
+
     let questionContent: ChatMessage["content"];
-    
+
     if (base64Image) {
       const imageContent: ImageUrlContent = {
         type: "image_url",
@@ -155,7 +155,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
     } else {
       questionContent = question;
     }
-  
+
     if (conversationId && questionContent !== undefined) {
       onSend(questionContent, conversationId);
       setDocumentContent(null);
@@ -165,9 +165,27 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
       setDocumentContent(null);
       setBase64Image(null);
     }
-  
+
     if (clearOnSend) {
       setQuestion('');
+    }
+  }
+
+  const autoResize = (ev: React.KeyboardEvent<Element>) => {
+    const htmlElement = document.getElementById(ev.currentTarget.id);
+    if (htmlElement) {
+      htmlElement.style.height = 'auto';
+      let heightToSet = 310;
+      let enableOverflow = true;
+      if (htmlElement.scrollHeight < 310){
+        heightToSet = htmlElement.scrollHeight;
+        enableOverflow = false;
+      }
+      if (enableOverflow)
+        htmlElement.style.overflowY = 'auto';
+      else
+        htmlElement.style.overflowY = 'hidden';
+      htmlElement.style.height = heightToSet + 'px';
     }
   }
 
@@ -180,11 +198,10 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
 
   const onQuestionChange = (_ev: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>, newValue?: string) => {
     if (ui?.limit_input_to_characters && ui?.limit_input_to_characters > 0 && newValue && newValue.length <= ui?.limit_input_to_characters) {
-        setQuestion(newValue);
+      setQuestion(newValue);
     }
-    if (!newValue)
-    {
-        setQuestion("");
+    if (!newValue) {
+      setQuestion("");
     }
   };
 
@@ -201,6 +218,7 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
         value={question}
         onChange={onQuestionChange}
         onKeyDown={onEnterPress}
+        onKeyUp={autoResize}      
       />
       {ui?.enable_image_chat && (
         <div className={styles.fileInputContainer}>
@@ -223,8 +241,8 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
       )}
       {base64Image && <img className={styles.uploadedImage} src={base64Image} alt="Uploaded Preview" />}
       {documentContent && (
-        <TooltipHost 
-          content={`${documentContent.documentType.toUpperCase()} uploaded`} 
+        <TooltipHost
+          content={`${documentContent.documentType.toUpperCase()} uploaded`}
           id="documentIndicator"
         >
           <div className={styles.documentPreview}>

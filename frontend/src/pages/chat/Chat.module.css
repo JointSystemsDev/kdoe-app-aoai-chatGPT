@@ -27,6 +27,7 @@
   border-radius: 8px;
   overflow-y: auto;
   max-height: calc(100vh - 100px);
+  padding-bottom: 160px;
 }
 
 .chatEmptyState {
@@ -138,7 +139,7 @@
 }
 
 .chatInput {
-  position: sticky;
+  position: fixed;
   flex: 0 0 100px;
   padding-top: 12px;
   padding-bottom: 24px;
@@ -146,7 +147,7 @@
   padding-right: 24px;
   width: calc(100% - 100px);
   max-width: 1028px;
-  margin-bottom: 50px;
+  bottom: 50px;
   margin-top: 8px;
 }
 
