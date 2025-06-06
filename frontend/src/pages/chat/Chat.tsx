@@ -832,7 +832,9 @@ const Chat = () => {
               <Stack className={styles.chatEmptyState}>
                 <img src={logo} className={styles.chatIcon} aria-hidden="true" onError={() => setLogo(Contoso)} />
                 <h1 className={styles.chatEmptyStateTitle}>{ui?.chat_title}</h1>
-                <h2 className={styles.chatEmptyStateSubtitle}>{ui?.chat_description}</h2>
+                <h2 className={styles.chatEmptyStateSubtitle} style={{whiteSpace: 'pre-line'}}>
+                 {ui?.chat_description}
+                </h2>
               </Stack>
             ) : (
               <div className={styles.chatMessageStream} style={{ marginBottom: isLoading ? '40px' : '0px' }} role="log">
