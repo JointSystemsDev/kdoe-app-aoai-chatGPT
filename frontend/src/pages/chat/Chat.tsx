@@ -46,6 +46,160 @@ import { AppStateContext } from "../../state/AppProvider";
 import { useBoolean } from "@fluentui/react-hooks";
 import { useEnvironment } from '../../state/EnvironmentProvider'
 
+// Helper function to convert URLs and emails in text to clickable links and handle line breaks
+// Supports five formats:
+// 1. Direct URLs: https://example.com
+// 2. Titled links: [Link Title|https://example.com]
+// 3. Direct emails: contact@example.com (becomes mailto:contact@example.com)
+// 4. Titled emails: [Contact Us|contact@example.com] (becomes mailto link)
+// 5. Line breaks: \n characters become <br /> elements
+const renderTextWithLinks = (text: string) => {
+  if (!text) return text;
+  
+  // First split by line breaks to handle them properly
+  const lines = text.split(/\\n|\n/);
+  const processedLines: (string | JSX.Element)[] = [];
+  
+  lines.forEach((line, lineIndex) => {
+    if (lineIndex > 0) {
+      // Add line break element between lines
+      processedLines.push(<br key={`br-${lineIndex}`} />);
+    }
+    
+    if (!line.trim()) {
+      // Empty line, just continue (the <br> was already added)
+      return;
+    }
+    
+    // Process URLs and emails in this line
+    const titledLinkRegex = /\[([^\]]+)\|((https?:\/\/[^\s\]]+|[^\s@]+@[^\s@]+\.[^\s@\]]+))\]/g;
+    const directUrlRegex = /(https?:\/\/[^\s\[\]]+)/g;
+    const emailRegex = /([^\s@]+@[^\s@]+\.[^\s@\[\]]+)/g;
+    
+    const elements: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let elementIndex = 0;
+    
+    // Process titled links first
+    let match;
+    while ((match = titledLinkRegex.exec(line)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        elements.push(line.substring(lastIndex, match.index));
+      }
+      
+      // Add the titled link (URL or email)
+      const title = match[1];
+      const url = match[2];
+      const isEmail = url.includes('@') && !url.startsWith('http');
+      const href = isEmail ? `mailto:${url}` : url;
+      
+      elements.push(
+        <a 
+          key={`titled-${lineIndex}-${elementIndex++}`}
+          href={href} 
+          target={isEmail ? undefined : "_blank"}
+          rel={isEmail ? undefined : "noopener noreferrer"}
+          style={{ color: '#0078d4', textDecoration: 'underline' }}
+        >
+          {title}
+        </a>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < line.length) {
+      elements.push(line.substring(lastIndex));
+    }
+    
+    // If no titled links were found, process the whole line with direct URLs and emails
+    if (elements.length === 1 && typeof elements[0] === 'string') {
+      // First split by URLs, then process emails in the remaining parts
+      const urlParts = line.split(directUrlRegex);
+      urlParts.forEach((part, index) => {
+        if (part.match(directUrlRegex)) {
+          processedLines.push(
+            <a 
+              key={`direct-url-${lineIndex}-${index}`}
+              href={part} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              style={{ color: '#0078d4', textDecoration: 'underline' }}
+            >
+              {part}
+            </a>
+          );
+        } else if (part) {
+          // Check for emails in this part
+          const emailParts = part.split(emailRegex);
+          emailParts.forEach((emailPart, emailIndex) => {
+            if (emailPart.match(emailRegex)) {
+              processedLines.push(
+                <a 
+                  key={`direct-email-${lineIndex}-${index}-${emailIndex}`}
+                  href={`mailto:${emailPart}`}
+                  style={{ color: '#0078d4', textDecoration: 'underline' }}
+                >
+                  {emailPart}
+                </a>
+              );
+            } else if (emailPart) {
+              processedLines.push(emailPart);
+            }
+          });
+        }
+      });
+    } else {
+      // Process any remaining direct URLs and emails in the elements
+      elements.forEach((element, index) => {
+        if (typeof element === 'string') {
+          // First split by URLs
+          const urlParts = element.split(directUrlRegex);
+          urlParts.forEach((part, partIndex) => {
+            if (part.match(directUrlRegex)) {
+              processedLines.push(
+                <a 
+                  key={`mixed-url-${lineIndex}-${index}-${partIndex}`}
+                  href={part} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#0078d4', textDecoration: 'underline' }}
+                >
+                  {part}
+                </a>
+              );
+            } else if (part) {
+              // Check for emails in this part
+              const emailParts = part.split(emailRegex);
+              emailParts.forEach((emailPart, emailIndex) => {
+                if (emailPart.match(emailRegex)) {
+                  processedLines.push(
+                    <a 
+                      key={`mixed-email-${lineIndex}-${index}-${partIndex}-${emailIndex}`}
+                      href={`mailto:${emailPart}`}
+                      style={{ color: '#0078d4', textDecoration: 'underline' }}
+                    >
+                      {emailPart}
+                    </a>
+                  );
+                } else if (emailPart) {
+                  processedLines.push(emailPart);
+                }
+              });
+            }
+          });
+        } else {
+          processedLines.push(element);
+        }
+      });
+    }
+  });
+  
+  return processedLines;
+};
+
 const enum messageStatus {
   NotRunning = 'Not Running',
   Processing = 'Processing',
@@ -832,8 +986,8 @@ const Chat = () => {
               <Stack className={styles.chatEmptyState}>
                 <img src={logo} className={styles.chatIcon} aria-hidden="true" onError={() => setLogo(Contoso)} />
                 <h1 className={styles.chatEmptyStateTitle}>{ui?.chat_title}</h1>
-                <h2 className={styles.chatEmptyStateSubtitle} style={{whiteSpace: 'pre-line'}}>
-                 {ui?.chat_description}
+                <h2 className={styles.chatEmptyStateSubtitle}>
+                 {renderTextWithLinks(ui?.chat_description || '')}
                 </h2>
               </Stack>
             ) : (
