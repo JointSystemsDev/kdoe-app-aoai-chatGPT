@@ -41,6 +41,8 @@ export const de = {
   'Switching to': 'Das Wechseln zu',
   'will start a new chat. Do you want to continue': 'wird einen neuen Chat starten. Wollen Sie weiter machen',
   'Switch': 'Wechseln',
-  'The uploaded Word document does not contain enough readable text.': 'Das hochgeladene Word-Dokument enthält nicht genügend lesbaren Text.',
-  'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': 'Das hochgeladene PDF enthält nicht genügend lesbaren Text. Das Dokument könnte gescannt sein oder der Text ist möglicherweise nicht maschinenlesbar.'
-};
+    'The uploaded Word document does not contain enough readable text.': 'Das hochgeladene Word-Dokument enthält nicht genügend lesbaren Text.',
+    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': 'Das hochgeladene PDF enthält nicht genügend lesbaren Text. Das Dokument könnte gescannt sein oder der Text könnte nicht maschinenlesbar sein.',
+    'Searching Bing...': 'Bing wird durchsucht...',
+    'Search in progress': 'Suche läuft'
+  };

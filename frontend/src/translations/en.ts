@@ -42,7 +42,9 @@ export const en = {
     'will start a new chat. Do you want to continue': '',
     'Switch': '',
     'The uploaded Word document does not contain enough readable text.': '',
-    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': ''
+    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': '',
+    'Searching Bing...': '',
+    'Search in progress': ''
   };
 
   // {t('Citations')}

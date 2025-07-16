@@ -95,6 +95,20 @@ const configSchema = yup.object({
       vector_columns: yup.string().nullable(),
       permitted_groups_column: yup.string().nullable(),
       strictness: yup.number().default(3)
+    }),
+    bing_search: yup.object({
+      enabled: yup.boolean().default(false),
+      api_key: yup.string().nullable(),
+      endpoint: yup.string().default("https://api.bing.microsoft.com/v7.0/search"),
+      max_results: yup.number().default(5),
+      additional_prompt: yup.string().default("Use the following web search results to enhance your response:"),
+      enhanced_system_prompt: yup.string().default(`You have access to web search functionality. Use the bing_web_search function when:
+- The user asks about recent events, current news, or latest information
+- You need up-to-date facts, prices, or data not in your training
+- The query would benefit from current web information
+- You're unsure about recent developments
+
+Always provide the source URLs when using search results.`)
     })
   })
 });
@@ -738,6 +752,101 @@ export const ConfigurationModal: React.FC<ConfigurationDialogProps> = ({
                 )}
               />
             </Stack>
+          </Stack>
+
+          <h4 className={styles.subsectionTitle}>Bing Search Configuration</h4>
+          <Stack tokens={{ childrenGap: 16 }}>
+            <Controller
+              name="backend_settings.bing_search.enabled"
+              control={control}
+              render={({ field: { value, onChange } }) => (
+                <Toggle
+                  label="Enable Bing Search"
+                  checked={value}
+                  onChange={(_, checked) => onChange(checked)}
+                />
+              )}
+            />
+
+            <Controller
+              name="backend_settings.bing_search.api_key"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Bing API Key"
+                  type="password"
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+
+            <Stack horizontal tokens={{ childrenGap: 16 }}>
+              <Stack.Item grow={1}>
+                <Controller
+                  name="backend_settings.bing_search.max_results"
+                  control={control}
+                  render={({ field: { onChange, value, ...rest } }) => (
+                    <TextField
+                      label="Max Results"
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={value?.toString()}
+                      onChange={(_, newValue) => onChange(newValue ? parseInt(newValue) : 5)}
+                      {...rest}
+                    />
+                  )}
+                />
+              </Stack.Item>
+              <Stack.Item grow={1}>
+                <Controller
+                  name="backend_settings.bing_search.endpoint"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      label="Bing Endpoint"
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Stack.Item>
+            </Stack>
+
+            <Controller
+              name="backend_settings.bing_search.additional_prompt"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Additional Prompt (for search results)"
+                  multiline
+                  rows={2}
+                  description="This text will be prepended to search results when presenting them to the AI"
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+
+            <Controller
+              name="backend_settings.bing_search.enhanced_system_prompt"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  label="Enhanced System Prompt"
+                  multiline
+                  rows={6}
+                  description="This will be appended to the system message to guide the AI on when to use search"
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
           </Stack>
         </div>
 

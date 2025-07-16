@@ -45,6 +45,7 @@ import { ChatHistoryPanel } from "../../components/ChatHistory/ChatHistoryPanel"
 import { AppStateContext } from "../../state/AppProvider";
 import { useBoolean } from "@fluentui/react-hooks";
 import { useEnvironment } from '../../state/EnvironmentProvider'
+import { SearchIndicator } from "../../components/common/SearchIndicator";
 
 // Helper function to convert URLs and emails in text to clickable links and handle line breaks
 // Supports five formats:
@@ -227,6 +228,7 @@ const Chat = () => {
   const [errorMsg, setErrorMsg] = useState<ErrorMessage | null>()
   const [logo, setLogo] = useState('')
   const [answerId, setAnswerId] = useState<string>('')
+  const [isSearching, setIsSearching] = useState<boolean>(false)
 
    // Function to process logo URL (keep consistent with Layout.tsx)
    const processLogoUrl = (logoPath: string | null | undefined) => {
@@ -1077,6 +1079,7 @@ const Chat = () => {
             )}
 
             <Stack horizontal className={styles.chatInput}>
+              <SearchIndicator isVisible={isSearching} />
               {isLoading && messages.length > 0 && (
                 <Stack
                   horizontal

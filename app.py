@@ -19,6 +19,7 @@ from quart import (
 )
 
 from backend.services.TableEnvironmentService import TableEnvironmentService
+from backend.services.bing_search import BingSearchService
 
 from openai import AsyncAzureOpenAI
 from azure.identity.aio import (
@@ -325,6 +326,97 @@ async def init_cosmosdb_client():
 
     return cosmos_conversation_client
 
+def get_bing_search_function():
+    """Define the Bing search function for OpenAI"""
+    return {
+        "type": "function",
+        "function": {
+            "name": "bing_web_search",
+            "description": "Search the web using Bing to get current information, recent news, or facts that may not be in your training data. Use this when the user asks about recent events, current prices, latest news, or when you need up-to-date information to provide a complete answer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query to find relevant information"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+
+def format_search_results_for_ai(search_results, bing_settings):
+    """Format search results for AI consumption"""
+    if "error" in search_results:
+        return f"Search error: {search_results['error']}"
+    
+    if not search_results.get("results"):
+        return "No search results found."
+    
+    formatted_results = f"{bing_settings.get('additional_prompt', '')}\n\n"
+    
+    for i, result in enumerate(search_results["results"], 1):
+        formatted_results += f"{i}. **{result['title']}**\n"
+        formatted_results += f"   URL: {result['url']}\n"
+        formatted_results += f"   {result['snippet']}\n\n"
+    
+    return formatted_results
+
+async def handle_function_calls(response, environment_settings, original_messages):
+    """Handle function calls from OpenAI response"""
+    if not response.choices[0].message.tool_calls:
+        return response
+    
+    # Process each function call
+    messages_with_function_results = original_messages.copy()
+    
+    for tool_call in response.choices[0].message.tool_calls:
+        if tool_call.function.name == "bing_web_search":
+            logging.info(f"Executing Bing search for query: {json.loads(tool_call.function.arguments).get('query', '')}")
+            
+            # Execute Bing search
+            search_args = json.loads(tool_call.function.arguments)
+            search_query = search_args.get("query", "")
+            
+            bing_settings = environment_settings['backend_settings']['bing_search']
+            bing_service = BingSearchService(
+                api_key=bing_settings['api_key'],
+                endpoint=bing_settings['endpoint']
+            )
+            
+            search_results = await bing_service.search(
+                search_query, 
+                bing_settings.get('max_results', 5)
+            )
+            
+            # Add function call message
+            messages_with_function_results.append({
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [tool_call]
+            })
+            
+            # Add function result message with configurable prompt
+            function_result = format_search_results_for_ai(search_results, bing_settings)
+            messages_with_function_results.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": function_result
+            })
+    
+    # Make second OpenAI call with function results
+    azure_openai_client = await init_openai_client(environment_settings)
+    final_response = await azure_openai_client.chat.completions.create(
+        model=app_settings.azure_openai.model,
+        messages=messages_with_function_results,
+        temperature=environment_settings['backend_settings']['openai']['temperature'],
+        max_tokens=environment_settings['backend_settings']['openai']['max_tokens'],
+        top_p=environment_settings['backend_settings']['openai']['top_p']
+    )
+    
+    return final_response
+
 async def prepare_model_args(request_body, request_headers, environment_settings):
     request_messages = request_body.get("messages", [])
     extra_headers, extra_query = build_openai_request_params(environment_settings['id'])
@@ -334,10 +426,19 @@ async def prepare_model_args(request_body, request_headers, environment_settings
     if not environment_settings:
         raise ValueError(f"No environment set")
 
+    # Check if Bing search is enabled and enhance system message
+    original_system_message = environment_settings['backend_settings']['openai']['system_message']
+    system_message = original_system_message
+    
+    if (environment_settings.get('backend_settings', {}).get('bing_search', {}).get('enabled', False)):
+        bing_settings = environment_settings['backend_settings']['bing_search']
+        enhanced_system_prompt = bing_settings.get('enhanced_system_prompt', '')
+        system_message = f"{original_system_message}\n\n{enhanced_system_prompt}"
+
     messages = [
         {
             "role": "system",
-            "content": environment_settings['backend_settings']['openai']['system_message']
+            "content": system_message
         }
     ]
 
@@ -398,6 +499,15 @@ async def prepare_model_args(request_body, request_headers, environment_settings
         "extra_headers": extra_headers,
         "extra_query": extra_query
     }
+
+    # Add Bing search function if enabled
+    tools = []
+    if (environment_settings.get('backend_settings', {}).get('bing_search', {}).get('enabled', False)):
+        tools.append(get_bing_search_function())
+    
+    if tools:
+        model_args["tools"] = tools
+        model_args["tool_choice"] = "auto"
 
     azure_search_settings = environment_settings['backend_settings']['azure_search']
     if azure_search_settings['service']:
@@ -512,10 +622,18 @@ async def send_chat_request(request_body, request_headers):
     try:
         azure_openai_client = await init_openai_client(environment_settings)
         
-        
         raw_response = await azure_openai_client.chat.completions.with_raw_response.create(**model_args)
         response = raw_response.parse()
-        apim_request_id = raw_response.headers.get("apim-request-id") 
+        apim_request_id = raw_response.headers.get("apim-request-id")
+        
+        # Check if response contains function calls and Bing search is enabled
+        if (response.choices[0].message.tool_calls and 
+            environment_settings and 
+            environment_settings.get('backend_settings', {}).get('bing_search', {}).get('enabled', False)):
+            
+            # Handle function calls and get final response
+            response = await handle_function_calls(response, environment_settings, model_args['messages'])
+            
     except Exception as e:
         logging.exception("Exception in send_chat_request")
         raise e

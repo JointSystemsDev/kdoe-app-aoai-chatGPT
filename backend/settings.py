@@ -780,6 +780,28 @@ class _AzureStorageSettings(BaseSettings):
         return self
     
     
+class _BingSearchSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="BING_SEARCH_",
+        env_file=DOTENV_PATH,
+        extra="ignore",
+        env_ignore_empty=True
+    )
+    
+    enabled: bool = False
+    api_key: Optional[str] = None
+    endpoint: str = "https://api.bing.microsoft.com/v7.0/search"
+    max_results: int = 5
+    additional_prompt: str = "Use the following web search results to enhance your response:"
+    enhanced_system_prompt: str = """You have access to web search functionality. Use the bing_web_search function when:
+- The user asks about recent events, current news, or latest information
+- You need up-to-date facts, prices, or data not in your training
+- The query would benefit from current web information
+- You're unsure about recent developments
+
+Always provide the source URLs when using search results."""
+
+
 class _AppSettings(BaseModel):
     base_settings: _BaseSettings = _BaseSettings()
     azure_openai: _AzureOpenAISettings = _AzureOpenAISettings()
@@ -791,6 +813,7 @@ class _AppSettings(BaseModel):
     chat_history: Optional[_ChatHistorySettings] = None
     datasource: Optional[DatasourcePayloadConstructor] = None
     promptflow: Optional[_PromptflowSettings] = None
+    bing_search: Optional[_BingSearchSettings] = None
 
     @model_validator(mode="after")
     def set_promptflow_settings(self) -> Self:
@@ -810,6 +833,14 @@ class _AppSettings(BaseModel):
         except ValidationError:
             self.chat_history = None
         
+        return self
+    
+    @model_validator(mode="after")
+    def set_bing_search_settings(self) -> Self:
+        try:
+            self.bing_search = _BingSearchSettings()
+        except ValidationError:
+            self.bing_search = None
         return self
     
     @model_validator(mode="after")
