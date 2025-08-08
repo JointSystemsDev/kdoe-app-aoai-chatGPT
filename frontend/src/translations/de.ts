@@ -60,5 +60,7 @@ export const de = {
   'Rephrase Question': 'Frage umformulieren',
   'Report Issue': 'Problem melden',
   'This error can be automatically retried': 'Dieser Fehler kann automatisch wiederholt werden',
-  'attempts remaining': 'Versuche verbleibend'
+  'attempts remaining': 'Versuche verbleibend',
+  'references': 'Referenzen',
+  'reference': 'Referenz'
 };

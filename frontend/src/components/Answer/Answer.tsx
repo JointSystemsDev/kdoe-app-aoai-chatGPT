@@ -312,8 +312,8 @@ export const Answer = ({ answer, onCitationClicked, onExectResultClicked }: Prop
                     role="button">
                     <span>
                       {parsedAnswer.citations.length > 1
-                        ? parsedAnswer.citations.length + ' references'
-                        : '1 reference'}
+                        ? parsedAnswer.citations.length + ' ' + t('references')
+                        : '1 ' + t('reference')}
                     </span>
                   </Text>
                   <FontIcon

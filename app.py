@@ -504,7 +504,7 @@ def construct_datasource_payload(request, environment_settings):
             ],
             "index_name": search_settings['index'],
             "query_type": search_settings['query_type'].lower(),
-            "role_information": openai_settings['system_message'],
+            # "role_information": openai_settings['system_message'],
             "semantic_configuration": search_settings['semantic_search_config'],
             "strictness": search_settings['strictness'],
             "top_n_documents": search_settings['top_k']

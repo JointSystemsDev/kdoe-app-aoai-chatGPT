@@ -60,7 +60,9 @@ export const en = {
     'Rephrase Question': '',
     'Report Issue': '',
     'This error can be automatically retried': '',
-    'attempts remaining': ''
+    'attempts remaining': '',
+    'references': 'references',
+    'reference': 'reference'
   };
 
   // {t('Citations')}

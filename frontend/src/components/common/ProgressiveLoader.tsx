@@ -11,8 +11,8 @@ interface ProgressiveLoaderProps {
 
 const LOADING_STAGES = [
   { message: 'Thinking...', duration: 5000 },
-  { message: 'Still processing...', duration: 10000 },
-  { message: 'This is taking longer than usual...', duration: 15000 },
+  { message: 'Still processing...', duration: 7000 },
+  { message: 'This is taking longer than usual...', duration: 10000 },
   { message: 'Almost there, please be patient...', duration: 0 } // Final stage
 ];
 

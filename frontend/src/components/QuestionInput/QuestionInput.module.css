@@ -11,6 +11,7 @@
   border-radius: 8px;
   width: 100%;
   min-height: 120px;
+  z-index: 5;
 }
 
 .questionInputTextArea {
