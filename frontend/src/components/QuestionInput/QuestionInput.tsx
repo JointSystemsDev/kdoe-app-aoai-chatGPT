@@ -68,6 +68,9 @@ export const QuestionInput = ({ onSend, disabled, placeholder, clearOnSend, conv
         // Clear any uploaded content
         setDocumentContent(null);
         setBase64Image(null);
+      } finally {
+        // Clear the file input value to allow re-uploading the same file
+        event.target.value = '';
       }
     }
   };
