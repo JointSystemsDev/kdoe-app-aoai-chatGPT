@@ -42,7 +42,25 @@ export const en = {
     'will start a new chat. Do you want to continue': '',
     'Switch': '',
     'The uploaded Word document does not contain enough readable text.': '',
-    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': ''
+    'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': '',
+    // Progressive loading messages
+    'Thinking...': '',
+    'Still processing...': '',
+    'This is taking longer than usual...': '',
+    'Almost there, please be patient...': '',
+    // Error messages
+    'I apologize, but I\'m having trouble processing your request. Please try again.': '',
+    'Sorry, something went wrong. Would you like to try rephrasing your question?': '',
+    'I\'m experiencing technical difficulties. Please refresh the page or try again later.': '',
+    'Network connection issue. Please check your internet connection and try again.': '',
+    'Request timed out. Please try again or rephrase your question.': '',
+    // Recovery actions
+    'Try Again': '',
+    'Refresh Page': '',
+    'Rephrase Question': '',
+    'Report Issue': '',
+    'This error can be automatically retried': '',
+    'attempts remaining': ''
   };
 
   // {t('Citations')}

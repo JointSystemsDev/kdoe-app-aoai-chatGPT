@@ -5,6 +5,7 @@ import logging
 import uuid
 import httpx
 import asyncio
+from datetime import datetime
 from typing import List, Optional, Any, Tuple
 from typing import Dict, Union
 from quart import (
@@ -203,6 +204,58 @@ frontend_settings = {
 
 # Enable Microsoft Defender for Cloud Integration
 MS_DEFENDER_ENABLED = os.environ.get("MS_DEFENDER_ENABLED", "true").lower() == "true"
+
+async def send_to_application_insights(instrumentation_key: str, telemetry_event: dict):
+    """
+    Send telemetry data to Application Insights using the REST API
+    """
+    # Application Insights ingestion endpoint
+    endpoint = "https://dc.applicationinsights.azure.com/v2/track"
+    
+    # Prepare the telemetry payload
+    payload = {
+        "name": f"Microsoft.ApplicationInsights.{instrumentation_key}.Event",
+        "time": datetime.utcnow().isoformat() + "Z",
+        "iKey": instrumentation_key,
+        "tags": {
+            "ai.application.ver": "1.0.0",
+            "ai.internal.sdkVersion": "py-rest:1.0.0"
+        },
+        "data": {
+            "baseType": "EventData",
+            "baseData": {
+                "ver": 2,
+                "name": telemetry_event["name"],
+                "properties": telemetry_event["properties"],
+                "measurements": telemetry_event.get("measurements", {})
+            }
+        }
+    }
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                endpoint,
+                json=payload,
+                headers=headers
+            )
+            
+            if response.status_code == 200:
+                logging.debug("Successfully sent telemetry to Application Insights")
+            else:
+                logging.warning(f"Application Insights returned status {response.status_code}: {response.text}")
+                
+    except httpx.TimeoutException:
+        logging.error("Timeout sending telemetry to Application Insights")
+        raise
+    except Exception as e:
+        logging.error(f"Error sending telemetry to Application Insights: {e}")
+        raise
 
 def build_openai_request_params(environment_id):
     """
@@ -1309,5 +1362,87 @@ async def clone_configuration(config_id):
     except Exception as e:
         logging.exception("Error cloning configuration")
         return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/api/telemetry/error", methods=["POST"])
+async def report_error_telemetry():
+    """Report error telemetry to Application Insights"""
+    try:
+        authenticated_user = get_authenticated_user_details(request.headers)
+        user_id = authenticated_user["user_principal_id"]
+        
+        request_json = await request.get_json()
+        
+        # Extract telemetry data
+        error_data = request_json.get("error", {})
+        context_data = request_json.get("context", {})
+        severity = request_json.get("severity", "medium")
+        category = request_json.get("category", "unknown")
+        action = request_json.get("action", "unknown")
+        
+        # Enrich with server-side context
+        enriched_context = {
+            **context_data,
+            "server_timestamp": datetime.utcnow().isoformat(),
+            "user_id": user_id,
+            "server_version": "1.0.0",  # You can make this dynamic
+            "environment": "production" if not DEBUG else "development"
+        }
+        
+        # Structure the telemetry event
+        telemetry_event = {
+            "name": "ChatError",
+            "properties": {
+                "error_message": error_data.get("message", "Unknown error"),
+                "error_name": error_data.get("name", "Error"),
+                "error_stack": error_data.get("stack", ""),
+                "severity": severity,
+                "category": category,
+                "action": action,
+                "user_id": user_id,
+                "url": context_data.get("url", ""),
+                "user_agent": context_data.get("userAgent", ""),
+                "conversation_id": context_data.get("conversationId", ""),
+                "environment_id": context_data.get("environmentId", ""),
+                "client_timestamp": context_data.get("timestamp", ""),
+                "server_timestamp": enriched_context["server_timestamp"],
+                "server_environment": enriched_context["environment"]
+            },
+            "measurements": {
+                "error_count": 1
+            }
+        }
+        
+        # Log the error for server-side monitoring
+        logging.error(f"Client Error Report: {error_data.get('message', 'Unknown error')} - "
+                     f"Category: {category}, Severity: {severity}, User: {user_id}, "
+                     f"Action: {action}")
+        
+        # Send telemetry to Application Insights if configured
+        if app_settings.ui.appinsights_instrumentationkey:
+            try:
+                # Send telemetry using HTTP REST API (more reliable than SDK in async context)
+                await send_to_application_insights(
+                    app_settings.ui.appinsights_instrumentationkey,
+                    telemetry_event
+                )
+                logging.info(f"Successfully sent error telemetry to Application Insights for user {user_id}")
+            except Exception as ai_error:
+                logging.error(f"Failed to send telemetry to Application Insights: {ai_error}")
+                # Don't fail the request if telemetry fails
+        else:
+            logging.debug("Application Insights not configured, skipping telemetry")
+        
+        return jsonify({
+            "success": True,
+            "message": "Error telemetry recorded successfully"
+        }), 200
+        
+    except Exception as e:
+        logging.exception("Error recording telemetry")
+        return jsonify({
+            "success": False,
+            "error": "Failed to record telemetry"
+        }), 500
 
 app = create_app()

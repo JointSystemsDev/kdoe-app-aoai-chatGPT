@@ -42,5 +42,23 @@ export const de = {
   'will start a new chat. Do you want to continue': 'wird einen neuen Chat starten. Wollen Sie weiter machen',
   'Switch': 'Wechseln',
   'The uploaded Word document does not contain enough readable text.': 'Das hochgeladene Word-Dokument enthält nicht genügend lesbaren Text.',
-  'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': 'Das hochgeladene PDF enthält nicht genügend lesbaren Text. Das Dokument könnte gescannt sein oder der Text ist möglicherweise nicht maschinenlesbar.'
+  'The uploaded PDF does not contain enough readable text. The document might be scanned or the text might not be machine-readable.': 'Das hochgeladene PDF enthält nicht genügend lesbaren Text. Das Dokument könnte gescannt sein oder der Text ist möglicherweise nicht maschinenlesbar.',
+  // Progressive loading messages
+  'Thinking...': 'Denke nach...',
+  'Still processing...': 'Verarbeite noch...',
+  'This is taking longer than usual...': 'Das dauert länger als gewöhnlich...',
+  'Almost there, please be patient...': 'Fast geschafft, bitte haben Sie Geduld...',
+  // Error messages
+  'I apologize, but I\'m having trouble processing your request. Please try again.': 'Entschuldigung, ich habe Probleme bei der Verarbeitung Ihrer Anfrage. Bitte versuchen Sie es erneut.',
+  'Sorry, something went wrong. Would you like to try rephrasing your question?': 'Entschuldigung, etwas ist schiefgelaufen. Möchten Sie Ihre Frage anders formulieren?',
+  'I\'m experiencing technical difficulties. Please refresh the page or try again later.': 'Ich habe technische Schwierigkeiten. Bitte laden Sie die Seite neu oder versuchen Sie es später erneut.',
+  'Network connection issue. Please check your internet connection and try again.': 'Netzwerkverbindungsproblem. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.',
+  'Request timed out. Please try again or rephrase your question.': 'Anfrage-Timeout. Bitte versuchen Sie es erneut oder formulieren Sie Ihre Frage anders.',
+  // Recovery actions
+  'Try Again': 'Erneut versuchen',
+  'Refresh Page': 'Seite neu laden',
+  'Rephrase Question': 'Frage umformulieren',
+  'Report Issue': 'Problem melden',
+  'This error can be automatically retried': 'Dieser Fehler kann automatisch wiederholt werden',
+  'attempts remaining': 'Versuche verbleibend'
 };
