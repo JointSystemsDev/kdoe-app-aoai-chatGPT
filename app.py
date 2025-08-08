@@ -5,6 +5,7 @@ import logging
 import uuid
 import httpx
 import asyncio
+from datetime import datetime
 from typing import List, Optional, Any, Tuple
 from typing import Dict, Union
 from quart import (
@@ -334,10 +335,17 @@ async def prepare_model_args(request_body, request_headers, environment_settings
     if not environment_settings:
         raise ValueError(f"No environment set")
 
+    # Get current date and replace {{TODAY}} placeholder in the system prompt
+    current_date = datetime.now().strftime("%d.%m.%Y")
+    system_message = environment_settings['backend_settings']['openai']['system_message']
+    
+    # Replace {{TODAY}} placeholder with the current date
+    system_message_with_date = system_message.replace("{{TODAY}}", current_date)
+    
     messages = [
         {
             "role": "system",
-            "content": environment_settings['backend_settings']['openai']['system_message']
+            "content": system_message_with_date
         }
     ]
 
