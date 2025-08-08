@@ -16,6 +16,10 @@ import Contoso from '../../assets/Contoso.svg'
 import { XSSAllowTags } from '../../constants/sanatizeAllowables'
 
 import { t } from '../../utils/localization';
+import { ProgressiveLoader } from '../../components/common/ProgressiveLoader';
+import { ErrorDisplay } from '../../components/common/ErrorDisplay';
+import { telemetryService } from '../../utils/telemetry';
+import { ApiWithRetry, ApiError, TimeoutError, NetworkError } from '../../utils/apiWithRetry';
 
 import {
   ChatMessage,
@@ -1058,19 +1062,17 @@ const Chat = () => {
                   </>
                 ))}
                 {showLoadingMessage && (
-                  <>
-                    <div className={styles.chatMessageGpt}>
-                      <Answer
-                        answer={{
-                          answer: t("Generating answer..."),
-                          citations: [],
-                          generated_chart: null
-                        }}
-                        onCitationClicked={() => null}
-                        onExectResultClicked={() => null}
-                      />
-                    </div>
-                  </>
+                  <div className={styles.chatMessageGpt}>
+                    <ProgressiveLoader 
+                      isLoading={showLoadingMessage}
+                      onTimeout={() => {
+                        // Handle timeout - could show error or stop generation
+                        console.warn('Request timed out');
+                        stopGenerating();
+                      }}
+                      timeoutDuration={60000} // 60 seconds
+                    />
+                  </div>
                 )}
                 <div ref={chatMessageStreamEnd} />
               </div>
